@@ -256,7 +256,62 @@ FOR EACH ROW EXECUTE FUNCTION trigger_isr_coupons();
 
 ---
 
-## 6. Reglas permanentes a agregar en sitio-hoy-database
+## 6. Checklist de verificación post-deploy
+
+Antes de dar el sitio por listo, verificar **todos** estos puntos. Si alguno falla, los productos nuevos nunca aparecerán en el sitio aunque se carguen desde el panel.
+
+- [ ] `tenants.url` apunta a la URL correcta de Vercel (sin trailing slash): `https://mi-sitio.vercel.app`
+- [ ] `tenants.revalidation_secret` tiene un valor (generado con `openssl rand -hex 32`)
+- [ ] La extensión `pg_net` está habilitada en Supabase (Database → Extensions → pg_net)
+- [ ] Los triggers `isr_products`, `isr_categories`, etc. existen en la DB (Database → Functions)
+- [ ] Las variables de entorno en Vercel incluyen `SUPABASE_SERVICE_ROLE_KEY` (no solo las `NEXT_PUBLIC_*`)
+- [ ] Los productos en Supabase tienen `active = true` y el `tenant_id` correcto
+
+**Prueba manual de la cadena completa:**
+```bash
+# 1. Verificar que el endpoint responde
+curl -X POST https://mi-sitio.vercel.app/api/revalidate \
+  -H "Authorization: Bearer MI_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"table": "products"}'
+# Debe devolver: {"ok":true,"tags":["products-TENANT_ID"]}
+
+# 2. Agregar un producto de prueba en Supabase y verificar que aparece en el sitio
+# (el trigger debe llamar al endpoint automáticamente)
+```
+
+Si el trigger no dispara, verificar en Supabase → Database → Logs si hay errores de `pg_net`.
+
+---
+
+## 7. Diagnóstico cuando los productos no aparecen
+
+Si un cliente reporta que agregó productos pero no se ven en el sitio:
+
+1. **Verificar los logs de Vercel** (proyecto → Deployments → Functions → catalogo) — si hay `[catalog] products error:` o `[catalog] products exception:`, el problema es de conexión a Supabase (variable de entorno faltante o RLS).
+2. **Verificar `active` y `tenant_id`** en la fila del producto en Supabase.
+3. **Llamar manualmente al endpoint de revalidación** para descartar que sea solo caché:
+   ```bash
+   curl -X POST https://mi-sitio.vercel.app/api/revalidate \
+     -H "Authorization: Bearer MI_SECRET" \
+     -d '{"table":"products"}'
+   ```
+4. Si el endpoint devuelve 401, el `revalidation_secret` en Supabase no coincide con el que se usó.
+5. Si el endpoint devuelve 200 pero los productos siguen sin aparecer, el problema es la conexión a Supabase (`SUPABASE_SERVICE_ROLE_KEY` no está en Vercel env vars).
+
+---
+
+## 8. Mock data y sitios en producción
+
+El patrón `useRealData` del skill `sitio-diseno` muestra mock products **solo mientras el catálogo está vacío** (fase de demo). Cuando el cliente empieza a cargar productos reales:
+
+1. **Verificar que el ISR funciona** (checklist del punto 6) antes de remover los mocks.
+2. Una vez confirmado, eliminar los arrays `MOCK_PRODUCTS` y `MOCK_CATEGORIES` del catálogo y reemplazar la condición por `const [products, categories] = await Promise.all([...])` directo.
+3. El sitio ya no depende de fallback — si la DB falla, el catálogo queda vacío (visible en logs).
+
+---
+
+## 9. Reglas permanentes a agregar en sitio-hoy-database
 
 - Nunca hardcodear la URL del sitio en triggers SQL. Siempre leer `url` y `revalidation_secret` de `tenants`.
 - Nunca usar `supabase_functions.http_request` con argumentos — la función pública no los acepta. Usar `net.http_post`.
@@ -265,3 +320,4 @@ FOR EACH ROW EXECUTE FUNCTION trigger_isr_coupons();
 - No usar `dynamic = 'force-dynamic'` en páginas de catálogo — rompe el ISR y hace que cada visita golpee Supabase.
 - No usar `revalidate = N` (timer fijo) — ineficiente y regenera aunque no haya cambios.
 - El ISR on-demand es el único approach correcto para sitios con catálogo editable.
+- Las funciones `getProducts` y `getCategories` siempre deben tener `try/catch` con `console.error` — sin esto los errores de Supabase son invisibles en producción.

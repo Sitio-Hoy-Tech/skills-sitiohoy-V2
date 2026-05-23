@@ -12,24 +12,30 @@ import { TAGS } from "@/lib/cache-tags"; // creado por skill isr-on-demand
 
 const getProducts = unstable_cache(
   async () => {
-    const tenantId = getTenantId();
-    const supabaseAdmin = createAdminClient();
+    try {
+      const tenantId = getTenantId();
+      const supabaseAdmin = createAdminClient();
 
-    const { data } = await supabaseAdmin
-      .from("products")
-      .select(`
-        id, name, slug, price, compare_at_price, description, featured,
-        category_id,
-        product_images (id, url, alt, position),
-        product_variants (id, name, price, price_modifier, stock)
-      `)
-      .eq("tenant_id", tenantId)
-      .eq("active", true)
-      .order("featured", { ascending: false })
-      .order("created_at", { ascending: false });
-      // sin .limit()
+      const { data, error } = await supabaseAdmin
+        .from("products")
+        .select(`
+          id, name, slug, price, compare_at_price, description, featured,
+          category_id,
+          product_images (id, url, alt, position),
+          product_variants (id, name, price, price_modifier, stock)
+        `)
+        .eq("tenant_id", tenantId)
+        .eq("active", true)
+        .order("featured", { ascending: false })
+        .order("created_at", { ascending: false });
+        // sin .limit()
 
-    return data ?? [];
+      if (error) console.error("[catalog] products error:", error.message);
+      return data ?? [];
+    } catch (e) {
+      console.error("[catalog] products exception:", e);
+      return [];
+    }
   },
   ["catalog-products"],
   { tags: [TAGS.PRODUCTS] }
@@ -37,20 +43,26 @@ const getProducts = unstable_cache(
 
 const getCategories = unstable_cache(
   async () => {
-    const tenantId = getTenantId();
-    const supabaseAdmin = createAdminClient();
+    try {
+      const tenantId = getTenantId();
+      const supabaseAdmin = createAdminClient();
 
-    const { data } = await supabaseAdmin
-      .from("categories")
-      .select(`
-        id, name, slug, position,
-        subcategories (id, name, slug, position)
-      `)
-      .eq("tenant_id", tenantId)
-      .eq("active", true)
-      .order("position");
+      const { data, error } = await supabaseAdmin
+        .from("categories")
+        .select(`
+          id, name, slug, position,
+          subcategories (id, name, slug, position)
+        `)
+        .eq("tenant_id", tenantId)
+        .eq("active", true)
+        .order("position");
 
-    return data ?? [];
+      if (error) console.error("[catalog] categories error:", error.message);
+      return data ?? [];
+    } catch (e) {
+      console.error("[catalog] categories exception:", e);
+      return [];
+    }
   },
   ["catalog-categories"],
   { tags: [TAGS.CATEGORIES] }

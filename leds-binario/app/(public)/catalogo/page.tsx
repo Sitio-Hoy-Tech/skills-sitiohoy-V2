@@ -12,7 +12,7 @@ const getProducts = unstable_cache(
       const tenantId = getTenantId();
       const supabaseAdmin = createAdminClient();
 
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("products")
         .select(`
           id, name, slug, price, compare_at_price, description, featured,
@@ -25,8 +25,10 @@ const getProducts = unstable_cache(
         .order("created_at", { ascending: false })
         .limit(50);
 
+      if (error) console.error("[catalog] products error:", error.message);
       return data ?? [];
-    } catch {
+    } catch (e) {
+      console.error("[catalog] products exception:", e);
       return [];
     }
   },
@@ -40,15 +42,17 @@ const getCategories = unstable_cache(
       const tenantId = getTenantId();
       const supabaseAdmin = createAdminClient();
 
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("categories")
         .select(`id, name, slug, position, subcategories (id, name, slug, position)`)
         .eq("tenant_id", tenantId)
         .eq("active", true)
         .order("position");
 
+      if (error) console.error("[catalog] categories error:", error.message);
       return data ?? [];
-    } catch {
+    } catch (e) {
+      console.error("[catalog] categories exception:", e);
       return [];
     }
   },
@@ -56,45 +60,13 @@ const getCategories = unstable_cache(
   { tags: [TAGS.CATEGORIES] }
 );
 
-// MOCK DATA — pantallas LED
-const MOCK_CATEGORIES = [
-  { id: "mock-cat-1", name: "Pantallas Exteriores", slug: "exteriores", position: 0, subcategories: [] },
-  { id: "mock-cat-2", name: "Pantallas Interiores", slug: "interiores", position: 1, subcategories: [] },
-  { id: "mock-cat-3", name: "Eventos", slug: "eventos", position: 2, subcategories: [] },
-];
-
-const MOCK_PRODUCTS = [
-  { id: "mock-1", name: "Pantalla LED Exterior P6", slug: "pantalla-led-exterior-p6", price: 450000, compare_at_price: 520000, description: "Pantalla LED exterior pitch P6, alta luminosidad 5000 nits, IP65. Ideal para fachadas de locales y publicidad exterior.", featured: true, category_id: "mock-cat-1", product_images: [{ url: "https://loremflickr.com/800/600/led,billboard,outdoor?lock=1", alt: "Pantalla LED exterior P6", position: 0 }] },
-  { id: "mock-2", name: "Pantalla LED Exterior P10", slug: "pantalla-led-exterior-p10", price: 290000, compare_at_price: null, description: "Pantalla LED exterior pitch P10. Perfecta para distancias largas, cartelería vial y señalización de gran formato.", featured: true, category_id: "mock-cat-1", product_images: [{ url: "https://loremflickr.com/800/600/led,outdoor,sign?lock=2", alt: "Pantalla LED exterior P10", position: 0 }] },
-  { id: "mock-3", name: "Pantalla LED Exterior P8 Full Color", slug: "pantalla-led-exterior-p8", price: 380000, compare_at_price: null, description: "Pantalla full color exterior pitch P8. Balance perfecto entre resolución y costo para publicidad dinámica.", featured: false, category_id: "mock-cat-1", product_images: [{ url: "https://loremflickr.com/800/600/led,advertising?lock=3", alt: "Pantalla LED exterior P8", position: 0 }] },
-  { id: "mock-4", name: "Display LED Interior P2.5", slug: "display-led-interior-p25", price: 620000, compare_at_price: 700000, description: "Display LED de alta resolución para interiores. Pitch P2.5 con colores vibrantes y ángulo de visión amplio de 160°.", featured: true, category_id: "mock-cat-2", product_images: [{ url: "https://loremflickr.com/800/600/led,indoor,display?lock=4", alt: "Display LED interior P2.5", position: 0 }] },
-  { id: "mock-5", name: "Pantalla LED Interior P3", slug: "pantalla-led-interior-p3", price: 480000, compare_at_price: null, description: "Pantalla LED interior pitch P3. Ideal para comercios, restaurantes y showrooms. Instalación fácil y rápida.", featured: false, category_id: "mock-cat-2", product_images: [{ url: "https://loremflickr.com/800/600/led,retail,screen?lock=5", alt: "Pantalla LED interior P3", position: 0 }] },
-  { id: "mock-6", name: "Menú Digital LED", slug: "menu-digital-led", price: 185000, compare_at_price: 210000, description: "Display LED para menú digital en restaurantes y bares. Actualización de precios y platos en tiempo real desde el celular.", featured: false, category_id: "mock-cat-2", product_images: [{ url: "https://loremflickr.com/800/600/menu,digital,restaurant?lock=6", alt: "Menú digital LED", position: 0 }] },
-  { id: "mock-7", name: "Módulo LED para Eventos 3x2m", slug: "modulo-led-eventos-3x2", price: 890000, compare_at_price: null, description: "Set de módulos LED configurables para armar pantallas de gran formato en eventos. Incluye estructura de soporte y operador técnico.", featured: true, category_id: "mock-cat-3", product_images: [{ url: "https://loremflickr.com/800/600/led,concert,event?lock=7", alt: "Módulo LED para eventos", position: 0 }] },
-  { id: "mock-8", name: "Pantalla LED Eventos 6x4m", slug: "pantalla-led-eventos-6x4", price: 1450000, compare_at_price: null, description: "Pantalla LED modular de 6x4 metros para eventos masivos. Pitch P5, brillo de 5500 nits. Incluye transporte e instalación.", featured: false, category_id: "mock-cat-3", product_images: [{ url: "https://loremflickr.com/800/600/stage,led,concert?lock=8", alt: "Pantalla LED eventos 6x4", position: 0 }] },
-  { id: "mock-9", name: "Cartel LED Scrolling", slug: "cartel-led-scrolling", price: 95000, compare_at_price: 115000, description: "Cartel LED scrolling horizontal para mostrar texto dinámico. Perfecto para farmacias, ferreterías y locales con promociones frecuentes.", featured: false, category_id: "mock-cat-1", product_images: [{ url: "https://loremflickr.com/800/600/led,sign,scrolling?lock=9", alt: "Cartel LED scrolling", position: 0 }] },
-  { id: "mock-10", name: "Pantalla LED Interior P1.5 4K", slug: "pantalla-led-interior-p15-4k", price: 1200000, compare_at_price: null, description: "Pantalla LED de ultra alta definición con pitch P1.5. Resolución equivalente a 4K para showrooms premium y presentaciones de lujo.", featured: false, category_id: "mock-cat-2", product_images: [{ url: "https://loremflickr.com/800/600/led,4k,screen?lock=11", alt: "Pantalla LED 4K interior", position: 0 }] },
-  { id: "mock-11", name: "Display LED Vidriera", slug: "display-led-vidriera", price: 320000, compare_at_price: 360000, description: "Pantalla LED transparente para vidrieras comerciales. Mostrá contenido sin bloquear la visibilidad del local.", featured: false, category_id: "mock-cat-2", product_images: [{ url: "https://loremflickr.com/800/600/transparent,led,window?lock=12", alt: "Display LED vidriera", position: 0 }] },
-  { id: "mock-12", name: "Arco LED para Eventos", slug: "arco-led-eventos", price: 550000, compare_at_price: null, description: "Estructura en arco con módulos LED para eventos y decoración especial. Medidas personalizables. Impacto visual garantizado.", featured: false, category_id: "mock-cat-3", product_images: [{ url: "https://loremflickr.com/800/600/led,arch,event?lock=13", alt: "Arco LED para eventos", position: 0 }] },
-];
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(price);
 }
 
 export default async function CatalogPage() {
-  let products: any[] = [];
-  let categories: any[] = [];
-
-  try {
-    [products, categories] = await Promise.all([getProducts(), getCategories()]);
-  } catch {
-    // usar mock
-  }
-
-  const useRealData = products.length > 0 && categories.length > 0;
-  const displayProducts = useRealData ? products : MOCK_PRODUCTS;
-  const displayCategories = useRealData ? categories : MOCK_CATEGORIES;
+  const [products, categories] = await Promise.all([getProducts(), getCategories()]);
 
   return (
     <div className="pt-20">
@@ -117,7 +89,7 @@ export default async function CatalogPage() {
             <button className="font-body text-sm px-4 py-2 rounded border border-brand-primary bg-brand-primary/10 text-brand-primary">
               Todos
             </button>
-            {displayCategories.map((cat: any) => (
+            {categories.map((cat: any) => (
               <button
                 key={cat.id}
                 className="font-body text-sm px-4 py-2 rounded border border-neutral-700 text-neutral-400 hover:border-brand-primary/40 hover:text-neutral-200 transition-colors"
@@ -130,7 +102,7 @@ export default async function CatalogPage() {
 
         {/* Grid de productos */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {displayProducts.map((product: any, i: number) => {
+          {products.map((product: any, i: number) => {
             const img = product.product_images?.[0]?.url || `https://loremflickr.com/800/600/led,screen?lock=${i + 1}`;
             const waLink = buildWhatsAppLink({ productName: product.name });
 

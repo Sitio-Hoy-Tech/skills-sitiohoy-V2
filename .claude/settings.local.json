@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:multiconection.com.ar)",
+      "Bash(copy *)",
+      "PowerShell(Copy-Item *)",
+      "PowerShell(New-Item *)",
+      "Bash(Get-Content \"C:\\\\Users\\\\tomas\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-tomas-OneDrive-Escritorio-skills-sitiohoy-V2\\\\bee95653-ac83-40ed-821b-8f2d6fbb925b\\\\tasks\\\\bn3yfol6b.output\" -Wait)",
+      "Bash(Select-String -Pattern \"Route \\\\\\(app\\\\\\)|Failed to compile|error TS|✓ Generating|Build complete|next build\")",
+      "PowerShell(npm run *)",
+      "PowerShell(Remove-Item *)",
+      "Bash([ -s \"$f\" ])"
+    ]
+  }
+}

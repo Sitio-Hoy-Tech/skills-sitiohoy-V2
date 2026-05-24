@@ -1,0 +1,122 @@
+{
+  "hero": {
+    "strip": [
+      { "src": "/images/hero/01.jpg", "alt": "Pantalla LED en vía pública" },
+      { "src": "/images/hero/02.jpg", "alt": "Pantalla LED en evento masivo" },
+      { "src": "/images/hero/03.jpg", "alt": "Pantalla LED en local comercial" },
+      { "src": "/images/hero/04.webp", "alt": "Pantalla LED corporativa" },
+      { "src": "/images/hero/05.jpg", "alt": "Pantalla LED en estadio" }
+    ]
+  },
+  "nosotros": {
+    "historia": {
+      "src": "/images/nosotros/historia.jpg",
+      "alt": "Instalación LED Multi Conection"
+    }
+  },
+  "home": {
+    "featured": [
+      { "src": "/images/home/featured-01.jpg", "alt": "Pantalla P10 Fixed Exterior" },
+      { "src": "/images/home/featured-02.jpg", "alt": "Curve P6.25 Outdoor" },
+      { "src": "/images/home/featured-03.jpg", "alt": "Pantalla Indoor Pitch 2.5mm" }
+    ]
+  },
+  "trabajos": [
+    {
+      "id": 1,
+      "src": "/images/trabajos/01.jpg",
+      "alt": "Centro Comercial GBA — Pantalla P4 indoor",
+      "title": "Centro Comercial GBA",
+      "description": "Pantalla P4 indoor de 8x3m en hall principal.",
+      "category": "Locales comerciales"
+    },
+    {
+      "id": 2,
+      "src": "/images/trabajos/02.jpg",
+      "alt": "Show en vivo CABA",
+      "title": "Show en vivo — CABA",
+      "description": "Pantallas P10 rental para evento masivo de 10,000 personas.",
+      "category": "Eventos"
+    },
+    {
+      "id": 3,
+      "src": "/images/trabajos/03.jpg",
+      "alt": "Publicidad móvil",
+      "title": "Publicidad móvil",
+      "description": "Proyecto publicitario led en acción.",
+      "category": "Corporativo"
+    },
+    {
+      "id": 4,
+      "src": "/images/trabajos/04.jpg",
+      "alt": "Tótem LED Autopista Panamericana",
+      "title": "Autopista Panamericana",
+      "description": "Tótem LED de 2x1m para publicidad de alto tráfico.",
+      "category": "Vía pública"
+    },
+    {
+      "id": 5,
+      "src": "/images/trabajos/05.webp",
+      "alt": "Festival de música con pantallas Curve P6.25",
+      "title": "Festival de música",
+      "description": "Sistema de 3 pantallas Curve P6.25 para escenario principal.",
+      "category": "Eventos"
+    },
+    {
+      "id": 6,
+      "src": "/images/trabajos/06.jpg",
+      "alt": "Showroom automotriz pantalla fine pitch",
+      "title": "Showroom automotriz",
+      "description": "Pantalla indoor pitch 2.5mm para sala de ventas premium.",
+      "category": "Locales comerciales"
+    },
+    {
+      "id": 7,
+      "src": "/images/trabajos/07.jpg",
+      "alt": "Estadio deportivo marcadores LED",
+      "title": "Estadio deportivo",
+      "description": "Marcadores LED perimetrales y pantalla central.",
+      "category": "Deportes"
+    },
+    {
+      "id": 8,
+      "src": "/images/trabajos/08.jpg",
+      "alt": "Hotel 5 estrellas pantalla transparente",
+      "title": "Hotel 5 estrellas",
+      "description": "Recepción con pantalla transparente mesh en vidriera.",
+      "category": "Hospitality"
+    },
+    {
+      "id": 9,
+      "src": "/images/trabajos/09.jpg",
+      "alt": "Cadena de farmacias pantallas P4",
+      "title": "Cadena de farmacias",
+      "description": "40 instalaciones de pantallas P4 en locales propios.",
+      "category": "Retail"
+    },
+    {
+      "id": 10,
+      "src": "/images/trabajos/10.jpg",
+      "alt": "Congreso nacional LED wall",
+      "title": "Congreso nacional",
+      "description": "Sala de conferencias con LED wall 12x3m.",
+      "category": "Corporativo"
+    },
+    {
+      "id": 11,
+      "src": "/images/trabajos/11.jpg",
+      "alt": "Exposición CABA pantallas LED flexibles",
+      "title": "Exposición CABA",
+      "description": "Stand de 80m² con pantallas LED flexibles curvas.",
+      "category": "Eventos"
+    },
+    {
+      "id": 12,
+      "src": "/images/trabajos/12.jpg",
+      "alt": "Supermercado cadena nacional pantallas indoor P3",
+      "title": "Supermercado cadena nacional",
+      "description": "Red de pantallas indoor P3 en puntos de venta clave.",
+      "category": "Retail"
+    }
+  ]
+}

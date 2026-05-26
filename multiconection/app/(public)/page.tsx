@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/tenant";
 import { TAGS } from "@/lib/cache-tags";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
+import { getTenantConfig } from "@/lib/supabase/tenant";
 import { HeroSection } from "@/components/ui/HeroSection";
 import { FAQSection } from "@/components/ui/FAQSection";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
@@ -96,6 +97,12 @@ const BENEFITS = [
 export default async function HomePage() {
   let featured: typeof MOCK_FEATURED = [];
 
+  const [tenantConfig] = await Promise.allSettled([getTenantConfig()]);
+  const whatsappNumber =
+    tenantConfig.status === "fulfilled"
+      ? (tenantConfig.value as Record<string, string>).whatsapp
+      : undefined;
+
   try {
     const dbFeatured = await getFeaturedProducts();
     if (dbFeatured.length > 0) {
@@ -108,6 +115,7 @@ export default async function HomePage() {
 
   const displayFeatured = featured.length > 0 ? featured : MOCK_FEATURED;
   const waLink = buildWhatsAppLink({
+    number: whatsappNumber,
     message: "Hola, quiero hacer una consulta sobre pantallas LED.",
   });
 
@@ -162,9 +170,9 @@ export default async function HomePage() {
 
             <div className="grid grid-cols-2 gap-4">
               {BENEFITS.map((b, i) => (
-                <ScrollReveal key={b.title} delay={i * 0.1}>
+                <ScrollReveal key={b.title} delay={i * 0.1} className="h-full">
                   <div
-                    className="p-6 rounded-xl card-led-hover"
+                    className="p-6 rounded-xl card-led-hover h-full flex flex-col"
                     style={{ backgroundColor: "#0C1828" }}
                   >
                     <span className="text-3xl mb-4 block">{b.icon}</span>
@@ -221,11 +229,11 @@ export default async function HomePage() {
           <div className="grid md:grid-cols-3 gap-6">
             {displayFeatured.map((product, i) => {
               const imgUrl = product.product_images?.[0]?.url ?? siteImages.home.featured[i]?.src ?? "";
-              const waProductLink = buildWhatsAppLink({ productName: product.name });
+              const waProductLink = buildWhatsAppLink({ number: whatsappNumber, productName: product.name });
               return (
-                <ScrollReveal key={product.id} delay={i * 0.1}>
+                <ScrollReveal key={product.id} delay={i * 0.1} className="h-full">
                   <div
-                    className="rounded-2xl overflow-hidden card-led-hover group"
+                    className="rounded-2xl overflow-hidden card-led-hover group h-full flex flex-col"
                     style={{ backgroundColor: "#142240" }}
                   >
                     <div className="overflow-hidden" style={{ backgroundColor: "#0c1828" }}>
@@ -239,12 +247,12 @@ export default async function HomePage() {
                         className="transition-transform duration-500 group-hover:scale-105"
                       />
                     </div>
-                    <div className="p-6">
+                    <div className="p-6 flex flex-col flex-1">
                       <h3 className="font-display font-bold text-xl text-white mb-2">
                         {product.name}
                       </h3>
                       <p
-                        className="font-body text-sm leading-relaxed mb-5"
+                        className="font-body text-sm leading-relaxed mb-5 flex-1"
                         style={{ color: "rgba(255,255,255,0.55)" }}
                       >
                         {product.description}

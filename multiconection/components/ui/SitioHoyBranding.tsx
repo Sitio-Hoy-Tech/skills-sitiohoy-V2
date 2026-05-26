@@ -17,7 +17,7 @@ export function SitioHoyBranding() {
           className="font-body text-xs"
           style={{ color: "rgba(255,255,255,0.35)" }}
         >
-          Sitio creado con{" "}
+          Sitio desarrollado con{" "}
           <Link
             href="https://sitiohoy.com.ar"
             target="_blank"

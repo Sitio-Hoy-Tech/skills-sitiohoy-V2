@@ -44,7 +44,7 @@ export function Header({ waLink }: { waLink: string }) {
         {/* Logo */}
         <Link href="/" className="flex items-center shrink-0">
           <Image
-            src="/logo.webp"
+            src="/logo1.png"
             alt="Multi Conection"
             width={160}
             height={48}

@@ -25,8 +25,7 @@ const getProducts = unstable_cache(
         )
         .eq("tenant_id", tenantId)
         .eq("active", true)
-        .order("featured", { ascending: false })
-        .order("created_at", { ascending: false })
+        .order("position", { ascending: true, nullsFirst: false })
         .limit(50);
       if (error) console.error("[catalog] products error:", error.message);
       return data ?? [];

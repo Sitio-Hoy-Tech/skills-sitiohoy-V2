@@ -100,12 +100,12 @@ export default function TrabajosPage() {
           {/* Masonry-like grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {siteImages.trabajos.map((project, i) => (
-              <ScrollReveal key={project.id} delay={(i % 3) * 0.08}>
+              <ScrollReveal key={project.id} delay={(i % 3) * 0.08} className="h-full">
                 <div
-                  className="group relative rounded-2xl overflow-hidden card-led-hover"
+                  className="group relative rounded-2xl overflow-hidden card-led-hover h-full"
                   style={{
                     border: "1px solid rgba(30,52,88,0.5)",
-                    aspectRatio: i % 5 === 0 ? "3/2" : "4/3",
+                    aspectRatio: "4/3",
                   }}
                 >
                   <Image

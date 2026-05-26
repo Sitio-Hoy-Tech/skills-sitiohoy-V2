@@ -21,7 +21,7 @@ export function Footer({ waLink }: { waLink: string }) {
           <div className="md:col-span-5">
             <Link href="/" className="inline-block mb-6">
               <Image
-                src="/logo.webp"
+                src="/logo1.png"
                 alt="Multi Conection"
                 width={160}
                 height={48}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -24,7 +25,26 @@ const STATS = [
   { value: "24/7", label: "Soporte técnico" },
 ];
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(window.matchMedia("(max-width: 1023px)").matches);
+  }, []);
+  return isMobile;
+}
+
 export function HeroSection({ waLink }: HeroSectionProps) {
+  const isMobile = useIsMobile();
+
+  // Desktop durations/delays preserved; mobile gets ~55% of those values
+  const tr = (dur: number, del: number, ease?: number[]) => ({
+    duration: isMobile ? dur * 0.55 : dur,
+    delay:    isMobile ? del * 0.55  : del,
+    ...(ease ? { ease } : {}),
+  });
+
+  const iy = (y: number) => isMobile ? Math.round(y * 0.55) : y;
+
   return (
     <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
       {/* Background */}
@@ -62,9 +82,9 @@ export function HeroSection({ waLink }: HeroSectionProps) {
         <div className="max-w-4xl">
           {/* Eyebrow */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: iy(16) }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={tr(0.6, 0)}
             className="flex items-center gap-3 mb-8"
           >
             <div
@@ -81,9 +101,9 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
           {/* Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: iy(30) }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            transition={tr(0.8, 0.1, [0.16, 1, 0.3, 1])}
             className="font-display font-black leading-[0.92] tracking-tight mb-6"
             style={{ fontSize: "clamp(3.5rem, 8vw, 7rem)", color: "#FFFFFF" }}
           >
@@ -96,9 +116,9 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
           {/* Subheadline */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: iy(20) }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.3 }}
+            transition={tr(0.7, 0.3)}
             className="font-body text-lg leading-relaxed mb-10 max-w-2xl"
             style={{ color: "rgba(255,255,255,0.65)" }}
           >
@@ -109,9 +129,9 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
           {/* CTAs */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: iy(20) }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.45 }}
+            transition={tr(0.7, 0.45)}
             className="flex flex-col sm:flex-row gap-4 mb-16"
           >
             <Link
@@ -156,13 +176,13 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
           {/* Stats */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: iy(20) }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.6 }}
+            transition={tr(0.7, 0.6)}
             className="grid grid-cols-2 sm:grid-cols-4 gap-6"
           >
             {STATS.map((stat) => (
-              <div key={stat.label}>
+              <div key={stat.label} className="text-center sm:text-left">
                 <p
                   className="font-display font-black text-3xl sm:text-4xl mb-1"
                   style={{ color: "#00B8D4" }}
@@ -181,11 +201,11 @@ export function HeroSection({ waLink }: HeroSectionProps) {
         </div>
       </div>
 
-      {/* Marquee logos — visible on enter */}
+      {/* Marquee logos */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.8, delay: 0.7 }}
+        transition={tr(0.8, 0.7)}
         className="relative z-10 w-full overflow-hidden py-4"
         style={{
           borderTop: "1px solid rgba(30,52,88,0.5)",
@@ -216,7 +236,7 @@ export function HeroSection({ waLink }: HeroSectionProps) {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 1.2, delay: 0.8 }}
+        transition={tr(1.2, 0.8)}
         className="relative z-10 w-full overflow-hidden"
         style={{ height: "280px" }}
       >
@@ -245,7 +265,6 @@ export function HeroSection({ waLink }: HeroSectionProps) {
             </div>
           ))}
         </div>
-        {/* gradient fade */}
         <div
           className="absolute inset-y-0 left-0 w-16"
           style={{ background: "linear-gradient(to right, #060D1A, transparent)" }}
@@ -260,7 +279,7 @@ export function HeroSection({ waLink }: HeroSectionProps) {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1.5, duration: 0.8 }}
+        transition={tr(0.8, 1.5)}
         className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
       >
         <div

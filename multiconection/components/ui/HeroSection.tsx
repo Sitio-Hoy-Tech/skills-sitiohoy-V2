@@ -37,10 +37,10 @@ export function HeroSection({ waLink }: HeroSectionProps) {
   const isMobile = useIsMobile();
 
   // Desktop durations/delays preserved; mobile gets ~55% of those values
-  const tr = (dur: number, del: number, ease?: number[]) => ({
+  const tr = (dur: number, del: number) => ({
     duration: isMobile ? dur * 0.55 : dur,
     delay:    isMobile ? del * 0.55  : del,
-    ...(ease ? { ease } : {}),
+    ease: [0.16, 1, 0.3, 1] as const,
   });
 
   const iy = (y: number) => isMobile ? Math.round(y * 0.55) : y;
@@ -103,7 +103,7 @@ export function HeroSection({ waLink }: HeroSectionProps) {
           <motion.h1
             initial={{ opacity: 0, y: iy(30) }}
             animate={{ opacity: 1, y: 0 }}
-            transition={tr(0.8, 0.1, [0.16, 1, 0.3, 1])}
+            transition={tr(0.8, 0.1)}
             className="font-display font-black leading-[0.92] tracking-tight mb-6"
             style={{ fontSize: "clamp(3.5rem, 8vw, 7rem)", color: "#FFFFFF" }}
           >

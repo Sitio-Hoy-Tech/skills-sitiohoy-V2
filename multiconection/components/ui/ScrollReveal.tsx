@@ -25,16 +25,17 @@ export function ScrollReveal({
 }: ScrollRevealProps) {
   const isMobile = useIsMobile();
 
+  // En mobile no hay animación: el contenido aparece directo sin esperar JS
+  if (isMobile) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: isMobile ? 14 : 28 }}
+      initial={{ opacity: 0, y: 28 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: isMobile ? "-20px" : "-60px" }}
-      transition={{
-        duration: isMobile ? 0.4 : 0.7,
-        delay: isMobile ? delay * 0.6 : delay,
-        ease: [0.16, 1, 0.3, 1],
-      }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] }}
       className={className}
     >
       {children}

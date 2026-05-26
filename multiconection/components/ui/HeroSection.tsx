@@ -36,14 +36,15 @@ function useIsMobile() {
 export function HeroSection({ waLink }: HeroSectionProps) {
   const isMobile = useIsMobile();
 
-  // Desktop durations/delays preserved; mobile gets ~55% of those values
+  // En mobile no hay animación: duración 0 e initial ya en estado final
   const tr = (dur: number, del: number) => ({
-    duration: isMobile ? dur * 0.55 : dur,
-    delay:    isMobile ? del * 0.55  : del,
+    duration: isMobile ? 0 : dur,
+    delay:    isMobile ? 0 : del,
     ease: [0.16, 1, 0.3, 1] as const,
   });
 
-  const iy = (y: number) => isMobile ? Math.round(y * 0.55) : y;
+  // En mobile y=0 para que el initial ya esté en su posición final
+  const iy = (y: number) => isMobile ? 0 : y;
 
   return (
     <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">

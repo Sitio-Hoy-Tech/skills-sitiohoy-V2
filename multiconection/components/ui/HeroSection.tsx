@@ -36,15 +36,18 @@ function useIsMobile() {
 export function HeroSection({ waLink }: HeroSectionProps) {
   const isMobile = useIsMobile();
 
-  // En mobile no hay animación: duración 0 e initial ya en estado final
+  // En mobile: sin animación, sin delay
   const tr = (dur: number, del: number) => ({
     duration: isMobile ? 0 : dur,
     delay:    isMobile ? 0 : del,
     ease: [0.16, 1, 0.3, 1] as const,
   });
 
-  // En mobile y=0 para que el initial ya esté en su posición final
+  // En mobile y=0: initial ya en posición final
   const iy = (y: number) => isMobile ? 0 : y;
+
+  // En mobile opacity=1: el elemento arranca visible, sin esperar JS
+  const io = (y = 0) => ({ opacity: isMobile ? 1 : 0, y: iy(y) });
 
   return (
     <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
@@ -83,10 +86,10 @@ export function HeroSection({ waLink }: HeroSectionProps) {
         <div className="max-w-4xl">
           {/* Eyebrow */}
           <motion.div
-            initial={{ opacity: 0, y: iy(16) }}
+            initial={io(16)}
             animate={{ opacity: 1, y: 0 }}
             transition={tr(0.6, 0)}
-            className="flex items-center gap-3 mb-8"
+            className="no-anim-mobile flex items-center gap-3 mb-8"
           >
             <div
               className="w-8 h-px"
@@ -102,10 +105,10 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
           {/* Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: iy(30) }}
+            initial={io(30)}
             animate={{ opacity: 1, y: 0 }}
             transition={tr(0.8, 0.1)}
-            className="font-display font-black leading-[0.92] tracking-tight mb-6"
+            className="no-anim-mobile font-display font-black leading-[0.92] tracking-tight mb-6"
             style={{ fontSize: "clamp(3.5rem, 8vw, 7rem)", color: "#FFFFFF" }}
           >
             PANTALLAS LED
@@ -117,10 +120,10 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
           {/* Subheadline */}
           <motion.p
-            initial={{ opacity: 0, y: iy(20) }}
+            initial={io(20)}
             animate={{ opacity: 1, y: 0 }}
             transition={tr(0.7, 0.3)}
-            className="font-body text-lg leading-relaxed mb-10 max-w-2xl"
+            className="no-anim-mobile font-body text-lg leading-relaxed mb-10 max-w-2xl"
             style={{ color: "rgba(255,255,255,0.65)" }}
           >
             Soluciones personalizadas en pantallas LED para publicidad, eventos
@@ -130,10 +133,10 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
           {/* CTAs */}
           <motion.div
-            initial={{ opacity: 0, y: iy(20) }}
+            initial={io(20)}
             animate={{ opacity: 1, y: 0 }}
             transition={tr(0.7, 0.45)}
-            className="flex flex-col sm:flex-row gap-4 mb-16"
+            className="no-anim-mobile flex flex-col sm:flex-row gap-4 mb-16"
           >
             <Link
               href="/catalogo"
@@ -177,10 +180,10 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
           {/* Stats */}
           <motion.div
-            initial={{ opacity: 0, y: iy(20) }}
+            initial={io(20)}
             animate={{ opacity: 1, y: 0 }}
             transition={tr(0.7, 0.6)}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-6"
+            className="no-anim-mobile grid grid-cols-2 sm:grid-cols-4 gap-6"
           >
             {STATS.map((stat) => (
               <div key={stat.label} className="text-center sm:text-left">
@@ -204,10 +207,10 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
       {/* Marquee logos */}
       <motion.div
-        initial={{ opacity: 0 }}
+        initial={io()}
         animate={{ opacity: 1 }}
         transition={tr(0.8, 0.7)}
-        className="relative z-10 w-full overflow-hidden py-4"
+        className="no-anim-mobile relative z-10 w-full overflow-hidden py-4"
         style={{
           borderTop: "1px solid rgba(30,52,88,0.5)",
           borderBottom: "1px solid rgba(30,52,88,0.5)",
@@ -235,10 +238,10 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
       {/* Hero image strip */}
       <motion.div
-        initial={{ opacity: 0 }}
+        initial={io()}
         animate={{ opacity: 1 }}
         transition={tr(1.2, 0.8)}
-        className="relative z-10 w-full overflow-hidden"
+        className="no-anim-mobile relative z-10 w-full overflow-hidden"
         style={{ height: "280px" }}
       >
         <div className="flex gap-3 w-full h-full">
@@ -278,10 +281,10 @@ export function HeroSection({ waLink }: HeroSectionProps) {
 
       {/* Scroll indicator */}
       <motion.div
-        initial={{ opacity: 0 }}
+        initial={io()}
         animate={{ opacity: 1 }}
         transition={tr(0.8, 1.5)}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+        className="no-anim-mobile absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
       >
         <div
           className="w-px h-10"

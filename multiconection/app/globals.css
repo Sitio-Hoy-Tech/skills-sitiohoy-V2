@@ -107,3 +107,12 @@
   box-shadow: 0 0 24px rgba(0, 184, 212, 0.2), inset 0 0 24px rgba(0, 184, 212, 0.05);
   transform: translateY(-4px);
 }
+
+/* En mobile el contenido del hero arranca visible antes de que JS cargue.
+   !important gana sobre los inline styles que aplica framer-motion. */
+@media (max-width: 1023px) {
+  .no-anim-mobile {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

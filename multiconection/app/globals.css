@@ -90,7 +90,7 @@
 }
 
 .animate-marquee {
-  animation: marqueeScroll 30s linear infinite;
+  animation: marqueeScroll 60s linear infinite;
 }
 
 .animate-glow-pulse {

@@ -9,8 +9,15 @@ import siteImages from "@/content/site-images.json";
 
 const LOGOS = [
   { src: "/images/logos/cocacola.png", alt: "Coca-Cola" },
+  { src: "/images/logos/fiat.svg", alt: "Fiat" },
   { src: "/images/logos/cronica.png",  alt: "Crónica TV" },
+  { src: "/images/logos/citroen.svg",  alt: "Citroen" },
+  { src: "/images/logos/larural.png",  alt: "La Rural" },
+  { src: "/images/logos/shell.png",  alt: "Shell" },
   { src: "/images/logos/eltrece.png",  alt: "El Trece" },
+  { src: "/images/logos/ypf_logoazul.svg",  alt: "YPF" },
+  { src: "/images/logos/peugeot.avif",  alt: "Peugeot" },
+  { src: "/images/logos/C9.webp",  alt: "Canal 9" },
 ];
 const MARQUEE_LOGOS = Array.from({ length: 8 }, () => LOGOS).flat();
 

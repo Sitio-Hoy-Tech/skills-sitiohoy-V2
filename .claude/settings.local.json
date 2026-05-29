@@ -9,7 +9,16 @@
       "Bash(Select-String -Pattern \"Route \\\\\\(app\\\\\\)|Failed to compile|error TS|✓ Generating|Build complete|next build\")",
       "PowerShell(npm run *)",
       "PowerShell(Remove-Item *)",
-      "Bash([ -s \"$f\" ])"
+      "Bash([ -s \"$f\" ])",
+      "Bash(Get-ChildItem -Path \"D:\\\\escritorio\\\\skills-sitiohoy-V2\\\\multiconection\" -Recurse -Depth 3)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3099/)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:3099/\" -UseBasicParsing -TimeoutSec 5 | Select-Object StatusCode)",
+      "PowerShell(Start-Process -FilePath \"cmd.exe\" -ArgumentList \"/c cd /d `\"D:\\\\escritorio\\\\skills-sitiohoy-V2\\\\multiconection`\" && npm run dev -- --port 3099\" -WindowStyle Hidden -PassThru | Select-Object Id)",
+      "PowerShell(Start-Sleep -Seconds 15; try { $r = Invoke-WebRequest -Uri \"http://localhost:3099/\" -UseBasicParsing -TimeoutSec 5; \"Status: $\\($r.StatusCode\\)\" } catch { \"Not ready: $_\" })",
+      "PowerShell(npx playwright --version 2>&1 | Select-Object -First 3)"
     ]
   }
 }

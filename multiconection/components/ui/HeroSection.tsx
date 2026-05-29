@@ -26,9 +26,9 @@ interface HeroSectionProps {
 }
 
 const STATS = [
-  { value: "1.000+", label: "Instalaciones" },
+  { value: "3.500+", label: "Instalaciones" },
   { value: "500+", label: "Clientes activos" },
-  { value: "10+", label: "Años de experiencia" },
+  { value: "15+", label: "Años de experiencia" },
   { value: "24/7", label: "Soporte técnico" },
 ];
 
@@ -59,13 +59,24 @@ export function HeroSection({ waLink }: HeroSectionProps) {
   return (
     <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
       {/* Background */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(135deg, #060D1A 0%, #0C1828 40%, #060D1A 100%)",
-        }}
-      />
+      <div className="absolute inset-0 overflow-hidden">
+        <Image
+          src="/fondo-hero.webp"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+          style={{ filter: "brightness(0.35) saturate(0.85)" }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(6,13,26,0.88) 0%, rgba(12,24,40,0.78) 40%, rgba(6,13,26,0.88) 100%)",
+          }}
+        />
+      </div>
 
       {/* LED Grid pattern */}
       <div

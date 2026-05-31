@@ -21,6 +21,12 @@
       { "src": "/images/home/featured-03.jpg", "alt": "Pantalla Indoor Pitch 2.5mm" }
     ]
   },
+   "invertir": {
+    "conNosotros": {
+      "src": "/images/home/featured-04.jpg",
+      "alt": "Instalación LED"
+    }
+  },
   "trabajos": [
     {
       "id": 1,

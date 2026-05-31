@@ -125,6 +125,126 @@ export default async function HomePage() {
       <HeroSection waLink={waLink} />
 
 
+      {/* POR QUÉ INVERTIR EN PANTALLAS LED */}
+      <section className="py-24 lg:py-32 relative overflow-hidden" style={{ backgroundColor: "#0C1828" }}>
+        {/* Fondo: líneas diagonales sutiles */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `repeating-linear-gradient(
+              -45deg,
+              rgba(0,184,212,0.04) 0px,
+              rgba(0,184,212,0.04) 1px,
+              transparent 1px,
+              transparent 40px
+            )`,
+          }}
+        />
+        {/* Orbe de luz cyan izquierda */}
+        <div
+          className="absolute -left-40 top-1/2 -translate-y-1/2 w-96 h-96 rounded-full pointer-events-none"
+          style={{
+            background: "radial-gradient(circle, rgba(0,184,212,0.12) 0%, transparent 70%)",
+          }}
+        />
+        {/* Orbe de luz magenta derecha */}
+        <div
+          className="absolute -right-40 bottom-0 w-80 h-80 rounded-full pointer-events-none"
+          style={{
+            background: "radial-gradient(circle, rgba(217,27,138,0.08) 0%, transparent 70%)",
+          }}
+        />
+        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
+          <ScrollReveal>
+            <h2 className="font-display font-black text-3xl lg:text-5xl text-white text-center mb-16 leading-tight">
+              ¿Por qué invertir en{" "}
+              <span className="text-gradient-brand">pantallas LED</span>?
+            </h2>
+          </ScrollReveal>
+
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Imagen izquierda */}
+            <ScrollReveal className="w-full">
+              <div className="relative rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(0,184,212,0.2)" }}>
+                <Image
+                  src={siteImages.invertir.conNosotros.src}
+                  alt={siteImages.invertir.conNosotros.alt}
+                  width={0}
+                  height={0}
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                  className="object-cover"
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(0,184,212,0.15) 0%, transparent 60%)",
+                  }}
+                />
+              </div>
+            </ScrollReveal>
+
+            {/* Items numerados derecha */}
+            <div className="flex flex-col gap-8">
+              {[
+                {
+                  title: "Impacto Visual en tu Publicidad",
+                  desc: "Las pantallas LED ofrecen una calidad de imagen excepcional, generando un 70% de impacto mayor a los carteles tradicionales.",
+                },
+                {
+                  title: "Flexibilidad y Versatilidad",
+                  desc: "Pueden adaptarse a diferentes espacios y necesidades, logrando cualquier tamaño o forma, sin importar si es en interior o exterior.",
+                },
+                {
+                  title: "Ahorro Energético",
+                  desc: "Las pantallas LED son eficientes energéticamente, lo que resulta en un ahorro significativo en costos de electricidad a largo plazo.",
+                },
+                {
+                  title: "Durabilidad y Fiabilidad",
+                  desc: "Son dispositivos duraderos y confiables, diseñados para resistir condiciones climáticas diversas y mantener un rendimiento constante.",
+                },
+              ].map((item, i) => (
+                <ScrollReveal key={item.title} delay={i * 0.1}>
+                  <div className="flex gap-5 items-start">
+                    <div
+                      className="shrink-0 w-10 h-10 lg:w-14 lg:h-14 rounded-full flex items-center justify-center font-display font-black text-white text-base lg:text-xl"
+                      style={{ backgroundColor: "#00B8D4", boxShadow: "0 0 20px rgba(0,184,212,0.4)" }}
+                    >
+                      {i + 1}
+                    </div>
+                    <div>
+                      <h3 className="font-display font-bold text-white text-lg lg:text-2xl mb-1 lg:mb-2">
+                        {item.title}
+                      </h3>
+                      <p className="font-body text-sm lg:text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+                        {item.desc}
+                      </p>
+                    </div>
+                  </div>
+                </ScrollReveal>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA centrado */}
+          <ScrollReveal className="mt-16 flex justify-center">
+            <a
+              href={waLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-full font-body font-bold text-base text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+              style={{
+                backgroundColor: "#00B8D4",
+                boxShadow: "0 0 30px rgba(0,184,212,0.35)",
+              }}
+            >
+              Pedí tu presupuesto ahora
+            </a>
+          </ScrollReveal>
+        </div>
+      </section>
+
+
       {/* BENEFICIOS */}
       <section className="py-24 lg:py-32" style={{ backgroundColor: "#060D1A" }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">

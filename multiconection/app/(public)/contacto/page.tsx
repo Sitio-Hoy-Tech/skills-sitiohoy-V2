@@ -132,9 +132,9 @@ export default function ContactoPage() {
                         <circle cx="12" cy="10" r="3" />
                       </svg>
                     ),
-                    label: "Dirección",
-                    value: "Chubut 4644, Ciudadela",
-                    sub: "Buenos Aires, Argentina",
+                    label: "Ubicación",
+                    value: "Capital Federal - Buenos Aires",
+                    sub: "",
                   },
                   {
                     icon: (

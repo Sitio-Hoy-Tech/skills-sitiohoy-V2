@@ -116,7 +116,7 @@ export default function NosotrosPage() {
                     className="font-display font-black text-4xl"
                     style={{ color: "#00B8D4" }}
                   >
-                    +10
+                    +15
                   </p>
                   <p
                     className="font-body text-xs uppercase tracking-wider"

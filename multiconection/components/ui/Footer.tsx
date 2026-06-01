@@ -121,7 +121,7 @@ export function Footer({ waLink }: { waLink: string }) {
                 </svg>
                 {/* Cliente: revisar/reemplazar con dirección real */}
                 <span className="font-body text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-                  Chubut 4644, Ciudadela<br />Buenos Aires, Argentina
+                  Capital Federal - Buenos Aires
                 </span>
               </li>
             </ul>

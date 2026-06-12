@@ -13,26 +13,45 @@ Pegar todo el bloque en el **SQL Editor de Supabase** del proyecto nuevo.
 CREATE TABLE IF NOT EXISTS public.tenants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
-  slug TEXT UNIQUE,
+  slug TEXT NOT NULL UNIQUE,
   mp_access_token TEXT,
   mp_public_key TEXT,
-  url TEXT UNIQUE,
-  resend_api_key TEXT,
+  url TEXT UNIQUE,                        -- URL del sitio (reemplaza NEXT_PUBLIC_SITE_URL)
+  resend_api_key TEXT,                    -- DEPRECADO: email ahora vía SMTP (ver smpt_user/smpt_pass)
   plan TEXT,                              -- 'esencial' | 'emprendimiento' | 'empresa'
-  status TEXT,
-  max_products INTEGER,                   -- 50 / 200 / NULL (ilimitado)
+  status TEXT DEFAULT 'active',
+  max_products INTEGER DEFAULT 50,        -- 50 / 200 / NULL (ilimitado)
   created_at TIMESTAMPTZ DEFAULT now(),
-  umami_url TEXT,
-  envia_access_token TEXT,                -- Solo plan Empresa con envíos automáticos
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  umami_url TEXT,                         -- Script src de Umami (reemplaza NEXT_PUBLIC_UMAMI_SRC)
+  umami_website_id TEXT,                  -- Website ID de Umami (reemplaza NEXT_PUBLIC_UMAMI_WEBSITE_ID)
+  -- Contacto / WhatsApp (reemplazan variables de entorno)
+  whatsapp TEXT,                          -- Número de WhatsApp (reemplaza NEXT_PUBLIC_WHATSAPP_NUMBER)
+  contact_email TEXT,                     -- Destino del formulario de contacto (reemplaza CONTACT_EMAIL)
+  -- Email SMTP del tenant (host/port/ssl van en platform_config). OJO: columnas con typo en la DB.
+  smpt_user TEXT,                         -- Usuario SMTP (ej: contacto@sitiohoy.com.ar) — también define el "from"
+  smpt_pass TEXT,                         -- Password SMTP
+  -- ISR on-demand
+  revalidation_secret TEXT,              -- Secret de /api/revalidate (reemplaza REVALIDATE_SECRET en prod)
+  -- Suscripción
   subscription_id TEXT,
   subscription_status TEXT,
   current_period_end TIMESTAMPTZ,
-  origin_name TEXT,                       -- Para Envia.com (plan Empresa)
+  suspended_at TIMESTAMPTZ,
+  -- Deploy
+  vercel_project_id TEXT,
+  -- Envia.com (Solo plan Empresa con envíos automáticos)
+  envia_access_token TEXT,
+  origin_name TEXT,
   origin_phone TEXT,
   origin_address TEXT,
   origin_city TEXT,
   origin_postal_code TEXT,
-  origin_state TEXT
+  origin_state TEXT,
+  -- Correo Argentino (Solo plan Empresa con CA directo; credenciales de plataforma en platform_config)
+  correo_argentino_customer_id TEXT,
+  correo_argentino_token TEXT,
+  correo_argentino_token_expires_at TIMESTAMPTZ
 );
 
 -- =============================================
@@ -76,21 +95,33 @@ CREATE TABLE IF NOT EXISTS public.subcategories (
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL,
+  tenant_id UUID NOT NULL REFERENCES public.tenants(id),
   name TEXT NOT NULL,
   price NUMERIC NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   created_by UUID REFERENCES auth.users(id),
   updated_by UUID REFERENCES auth.users(id),
-  active BOOLEAN,
-  featured BOOLEAN,
+  active BOOLEAN DEFAULT true,
+  featured BOOLEAN DEFAULT false,
   description TEXT,
   slug TEXT,
   category_id UUID REFERENCES public.categories(id),
+  subcategory_id UUID REFERENCES public.subcategories(id),
   compare_at_price NUMERIC,
   is_sale BOOLEAN DEFAULT false,
-  sale_price NUMERIC
+  sale_price NUMERIC,
+  is_service BOOLEAN NOT NULL DEFAULT false,
+  -- Stock
+  stock INTEGER CHECK (stock IS NULL OR stock >= 0),
+  stock_unlimited BOOLEAN DEFAULT true,
+  position INTEGER DEFAULT 0,
+  -- Envío / dimensiones (para cotización de envíos)
+  weight_grams INTEGER DEFAULT 500,
+  shipping_required BOOLEAN DEFAULT true,
+  length_cm NUMERIC,
+  width_cm NUMERIC,
+  height_cm NUMERIC
 );
 
 -- =============================================
@@ -139,7 +170,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
   mp_payment_id TEXT,
-  status TEXT CHECK (status IN ('pending', 'confirmed', 'preparing', 'shipped', 'delivered', 'cancelled')),
+  status TEXT CHECK (status IN ('pending', 'pending_payment', 'paid', 'payment_failed', 'processing', 'confirmed', 'shipped', 'delivered', 'cancelled', 'refunded')),
   total NUMERIC,
   payer_email TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -225,10 +256,15 @@ CREATE TABLE IF NOT EXISTS public.contact_messages (
   name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
+  subject TEXT,
   message TEXT NOT NULL,
   source TEXT DEFAULT 'contact_form',
-  status TEXT DEFAULT 'new' CHECK (status IN ('new', 'read', 'archived')),
-  created_at TIMESTAMPTZ DEFAULT now()
+  status TEXT DEFAULT 'new' CHECK (status IN ('new', 'read', 'replied', 'pending_reply', 'archived', 'reopened', 'closed')),
+  assigned_user_id UUID REFERENCES auth.users(id),
+  labels TEXT[] DEFAULT '{}',
+  last_message_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- =============================================
@@ -257,10 +293,90 @@ CREATE TABLE IF NOT EXISTS public.payment_events (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- =============================================
+-- PLATFORM CONFIG (nivel plataforma, fila única — NO por tenant)
+-- SMTP del servidor de correo + credenciales de Correo Argentino de la plataforma
+-- =============================================
+CREATE TABLE IF NOT EXISTS public.platform_config (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- SMTP del servidor (Hostinger por defecto). El usuario/pass van por tenant en tenants.smpt_user/smpt_pass
+  host TEXT,                              -- ej: smtp.hostinger.com
+  port INTEGER,                          -- ej: 465
+  ssl BOOLEAN,                           -- true para puerto 465
+  -- Correo Argentino (MiCorreo) — credenciales de la cuenta operativa de la plataforma
+  correo_argentino_user TEXT,
+  correo_argentino_password TEXT,
+  correo_argentino_customer_id TEXT,
+  correo_argentino_token TEXT,
+  correo_argentino_token_expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- =============================================
+-- BLOG (opcional, todos los planes)
+-- =============================================
+CREATE TABLE IF NOT EXISTS public.blog_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES public.tenants(id),
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  active BOOLEAN DEFAULT true,
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.blog_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES public.tenants(id),
+  category_id UUID REFERENCES public.blog_categories(id),
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  excerpt TEXT,
+  content TEXT,
+  cover_image TEXT,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
+  published_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- =============================================
+-- ATRIBUTOS DE PRODUCTO (ej: "Color", "Talle" con sus valores)
+-- =============================================
+CREATE TABLE IF NOT EXISTS public.product_attributes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES public.tenants(id),
+  product_id UUID NOT NULL REFERENCES public.products(id),
+  name TEXT NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.product_attribute_values (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES public.tenants(id),
+  product_attribute_id UUID NOT NULL REFERENCES public.product_attributes(id),
+  value TEXT NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0
+);
+
+-- =============================================
+-- CRM WEBHOOK CONFIG (clave/valor, nivel plataforma)
+-- =============================================
+CREATE TABLE IF NOT EXISTS public.crm_webhook_config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
 -- Índices adicionales
 CREATE INDEX IF NOT EXISTS idx_contact_messages_tenant ON public.contact_messages(tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_order_events_order ON public.order_events(order_id);
 CREATE INDEX IF NOT EXISTS idx_payment_events_order ON public.payment_events(order_id);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_tenant ON public.blog_posts(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_blog_categories_tenant ON public.blog_categories(tenant_id, active, position);
+CREATE INDEX IF NOT EXISTS idx_product_attributes_product ON public.product_attributes(product_id, position);
+CREATE INDEX IF NOT EXISTS idx_product_attribute_values_attr ON public.product_attribute_values(product_attribute_id, position);
 ```
 
 ## Después de ejecutar el SQL

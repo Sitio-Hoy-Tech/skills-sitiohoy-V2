@@ -26,12 +26,12 @@ Para etiquetas PDF automáticas existe la API Corporativa (Web Services), que re
 
 ---
 
-## URLs base
+## URL base
 
-```env
-# Solo la URL base en .env (test vs prod)
-CA_API_URL=https://apitest.correoargentino.com.ar/micorreo/v1   # testing
-# CA_API_URL=https://api.correoargentino.com.ar/micorreo/v1     # producción
+La URL de la API es una **constante en el código** (producción) — no va en `.env` (no hay variables de entorno fuera de las 5 base). El entorno de testing no se usa.
+
+```
+https://api.correoargentino.com.ar/micorreo/v1
 ```
 
 Las credenciales (user, password) NO van en `.env` ni en `tenants` — se leen de `platform_config` en Supabase.
@@ -123,15 +123,15 @@ export const toCAProvinceCode = (province: string): string =>
 ## `lib/correo-argentino/client.ts`
 
 ```typescript
-import { createServiceClient } from '@/lib/supabase/server'
-import { env } from '@/lib/config/env'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getTenantId } from '@/lib/tenant'
 
-const CA_API = process.env.CA_API_URL ?? 'https://api.correoargentino.com.ar/micorreo/v1'
+const CA_API = 'https://api.correoargentino.com.ar/micorreo/v1'
 
 // ─── Token management ────────────────────────────────────────────────────────
 
 async function getCorreoArgentinoConfig() {
-  const supabase = createServiceClient()
+  const supabase = createAdminClient()
 
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
@@ -140,7 +140,7 @@ async function getCorreoArgentinoConfig() {
       correo_argentino_customer_id,
       origin_postal_code
     `)
-    .eq('id', env.NEXT_PUBLIC_TENANT_ID)
+    .eq('id', getTenantId())
     .single()
 
   if (tenantError || !tenant) throw new Error('Tenant no encontrado para Correo Argentino.')
@@ -202,7 +202,7 @@ export async function getCAToken(): Promise<string> {
     : expiresDate
 
   // Guardar en DB
-  const supabase = createServiceClient()
+  const supabase = createAdminClient()
   await supabase
     .from('platform_config')
     .update({
@@ -245,7 +245,7 @@ export async function getCACustomerId(): Promise<string> {
   const { customerId } = await res.json() as { customerId: string }
 
   // Guardar en DB
-  const supabase = createServiceClient()
+  const supabase = createAdminClient()
   await supabase
     .from('tenants')
     .update({ correo_argentino_customer_id: customerId })
@@ -405,14 +405,18 @@ export interface CATrackingResult {
 export async function getTracking(shippingId: string): Promise<CATrackingResult | null> {
   const token = await getCAToken()
 
-  const res = await fetch(`${CA_API}/shipping/tracking`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ shippingId }),
-  })
+  // ⚠️ fetch/undici lanza error con GET + body — el parámetro va por query string.
+  // Si la doc oficial de MiCorreo indica que el endpoint requiere body, cambiar a POST.
+  const res = await fetch(
+    `${CA_API}/shipping/tracking?shippingId=${encodeURIComponent(shippingId)}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  )
 
   if (!res.ok) return null
 

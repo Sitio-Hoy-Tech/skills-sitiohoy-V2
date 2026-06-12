@@ -11,17 +11,19 @@ Integra Umami Cloud como sistema de analíticas. Cumple GDPR sin cookies.
 
 - Next.js App Router + TypeScript
 - Cuenta en [cloud.umami.is](https://cloud.umami.is)
-- Supabase configurado (`tenants.umami_url`)
+- Supabase configurado (`tenants.umami_url`, `tenants.umami_website_id`) + helper `getTenantConfig()`
 
 ## Configuración por tenant
 
-| Campo | Dónde | Descripción |
-|---|---|---|
-| `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | `.env.local` del proyecto Vercel | ID único del sitio en Umami (distinto por cliente) |
-| `NEXT_PUBLIC_UMAMI_SRC` | `.env.local` | URL del script (default: `https://cloud.umami.is/script.js`) |
-| `tenants.umami_url` | Supabase | Referencia admin de qué script usa cada tenant |
+Toda la config de Umami vive en la tabla `tenants` (Supabase). **No va en `.env`.** El root layout la lee con `getTenantConfig()`.
 
-**Cada deploy de Vercel tiene su propio Website ID** — esto separa las métricas por cliente.
+| Campo | Columna en `tenants` | Descripción |
+|---|---|---|
+| Website ID | `umami_website_id` | UUID único del sitio en Umami (distinto por cliente) |
+| Script src | `umami_url` | URL del script (default: `https://cloud.umami.is/script.js`) |
+| Dominio | (derivado de `url`) | El dominio para `data-domains` sale de `tenants.url` |
+
+**Cada cliente tiene su propio Website ID** en su fila de `tenants` — esto separa las métricas por cliente.
 
 ## Setup en Umami Cloud
 
@@ -29,14 +31,16 @@ Integra Umami Cloud como sistema de analíticas. Cumple GDPR sin cookies.
 2. Settings → **Add Website**.
 3. Nombre: nombre del cliente (ej: `Gilded Glow Skin`).
 4. Dominio: dominio del cliente (ej: `gildedglow.com.ar`).
-5. Copiar el **Website ID** → guardar en `NEXT_PUBLIC_UMAMI_WEBSITE_ID` en Vercel.
+5. Copiar el **Website ID** → guardar en `tenants.umami_website_id` (Supabase).
 6. Guardar `https://cloud.umami.is/script.js` en `tenants.umami_url` (Supabase).
 
-## Variables de entorno
+## Configuración en Supabase
 
-```env
-NEXT_PUBLIC_UMAMI_WEBSITE_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-NEXT_PUBLIC_UMAMI_SRC=https://cloud.umami.is/script.js
+```sql
+UPDATE public.tenants SET
+  umami_website_id = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+  umami_url = 'https://cloud.umami.is/script.js'
+WHERE id = '{TENANT_ID}';
 ```
 
 ---
@@ -55,9 +59,9 @@ NEXT_PUBLIC_UMAMI_SRC=https://cloud.umami.is/script.js
 ## Notas importantes
 
 - Umami **no usa cookies** — cumple GDPR/privacidad sin banner.
-- **`NEXT_PUBLIC_UMAMI_WEBSITE_ID` debe ser un UUID** del formato `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`. Si se pone cualquier otro valor (email, texto libre), el script se inyecta pero la API de Umami devuelve `400` en cada evento.
-- Si `NEXT_PUBLIC_UMAMI_WEBSITE_ID` está vacío o no está definido, el script simplemente no se inyecta — no rompe nada.
-- **El script SÍ intenta enviar eventos desde `localhost`** si `NEXT_PUBLIC_UMAMI_WEBSITE_ID` está definido. Para evitar los 400 en desarrollo, usar `data-domains` en el `<Script>` (ver ref `umami-analytics--ref--root-layout`). Agregar `NEXT_PUBLIC_SITE_DOMAIN=dominio.com.ar` al `.env.local`.
+- **`umami_website_id` debe ser un UUID** del formato `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`. Si se pone cualquier otro valor (email, texto libre), el script se inyecta pero la API de Umami devuelve `400` en cada evento.
+- Si `umami_website_id` está vacío o null, el script simplemente no se inyecta — no rompe nada.
+- **El script SÍ intenta enviar eventos desde `localhost`** si `umami_website_id` está definido. Para evitar los 400 en desarrollo, usar `data-domains` en el `<Script>` (ver ref `umami-analytics--ref--root-layout`). El dominio se deriva automáticamente de `tenants.url` con `getSiteDomain()`.
 - El dashboard de Umami es accesible en [cloud.umami.is](https://cloud.umami.is). Compartir acceso read-only al cliente desde Settings → Share.
 - `strategy="afterInteractive"` asegura que el script no bloquea el render ni el LCP.
 

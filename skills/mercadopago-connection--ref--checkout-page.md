@@ -12,11 +12,12 @@ import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
 import { useRouter } from "next/navigation";
 
 type CartItem = {
-  id: string;
-  variant_id?: string;
+  id: string;          // productId-variantId (key del CartContext)
+  productId: string;
+  variantId?: string;
   name: string;
-  variant_name?: string;
-  price: number;
+  variantName?: string;
+  price: number;       // solo para mostrar en la UI — el server NO lo usa
   quantity: number;
 };
 
@@ -28,9 +29,9 @@ type CustomerInfo = {
 };
 
 type ShippingInfo = {
-  carrier: string;
-  service?: string;
-  cost: number;
+  zone_id?: string;    // Rama B (zonas fijas) — el server busca el precio por id
+  carrier?: string;    // Rama A (Envia) — el server re-cotiza y matchea
+  service?: string;    // Rama A
   street?: string;
   city?: string;
   state?: string;
@@ -39,8 +40,7 @@ type ShippingInfo = {
 };
 
 type CouponInfo = {
-  code: string;
-  discount: number;
+  code: string;        // SOLO el código — el descuento lo recalcula el server
 };
 
 export default function CheckoutPage() {
@@ -53,8 +53,6 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [mpInitialized, setMpInitialized] = useState(false);
   const router = useRouter();
-
-  const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!;
 
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
@@ -93,15 +91,20 @@ export default function CheckoutPage() {
         initMercadoPago(keyData.mp_public_key, { locale: "es-AR" });
         setMpInitialized(true);
 
+        // ⚠️ Al server van SOLO ids y cantidades — los precios, el descuento
+        // y el envío los calcula /api/create-preference contra la DB.
         const prefRes = await fetch("/api/create-preference", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            items: parsedCart,
-            tenantId,
+            items: parsedCart.map((i) => ({
+              product_id: i.productId,
+              variant_id: i.variantId,
+              quantity: i.quantity,
+            })),
             customer,
             shipping,
-            coupon,
+            coupon: coupon ? { code: coupon.code } : undefined,
           }),
         });
         const prefData = await prefRes.json();
@@ -109,13 +112,8 @@ export default function CheckoutPage() {
         if (prefData.preferenceId && prefData.orderId) {
           setPreferenceId(prefData.preferenceId);
           setOrderId(prefData.orderId);
-          const subtotal = parsedCart.reduce(
-            (s, i) => s + i.price * i.quantity,
-            0
-          );
-          setTotal(
-            Math.max(0, subtotal - (coupon?.discount ?? 0)) + shipping.cost
-          );
+          // Total autoritativo calculado por el server — nunca calcularlo acá
+          setTotal(prefData.total);
         } else {
           setError(prefData.error || "Error al crear la preferencia.");
         }
@@ -128,7 +126,7 @@ export default function CheckoutPage() {
     }
 
     init();
-  }, [tenantId, router]);
+  }, [router]);
 
   const handleSubmit = useCallback(
     async (formData: unknown) => {
@@ -139,7 +137,7 @@ export default function CheckoutPage() {
         const res = await fetch("/api/process-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ formData, tenantId, orderId }),
+          body: JSON.stringify({ formData, orderId }),
         });
 
         const data = await res.json();
@@ -162,7 +160,7 @@ export default function CheckoutPage() {
         setProcessing(false);
       }
     },
-    [tenantId, orderId, router]
+    [orderId, router]
   );
 
   // TODO: skill sitio-diseno — wrapper visual del checkout
@@ -196,6 +194,10 @@ export default function CheckoutPage() {
 
 ## Notas
 
-- El form de captura de datos del comprador, selección de envío y validación de cupón vive en `app/checkout/datos/page.tsx` (lo arma el skill `sitio-diseno`).
+- El form de captura de datos del comprador, selección de envío y validación de cupón vive en `app/checkout/datos/page.tsx` (lo arma el skill `sitio-diseno`). **Contrato de localStorage que esa página debe respetar:**
+  - `checkout_customer` → `{ first_name, last_name, email, phone? }`
+  - `checkout_shipping` → Rama B: `{ zone_id, street, city, state, postal_code, notes? }` · Rama A: `{ carrier, service, street, city, state, postal_code, notes? }`
+  - `checkout_coupon` → `{ code }` (solo el código — sin discount; el server lo recalcula)
 - Este archivo solo monta el Payment Brick una vez que los datos están en localStorage.
+- El `total` que se muestra y se pasa al Brick viene del response de `/api/create-preference` (autoritativo, calculado contra la DB).
 - El status del pago se ve en `app/checkout/status/page.tsx` (también del skill de diseño).

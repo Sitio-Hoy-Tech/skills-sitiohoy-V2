@@ -122,6 +122,7 @@ Plan: `empresa`. El script `setup-rls.sql` ahora:
 - `policies-categories`
 - `policies-orders-coupons`
 - `policies-system`
+- `policies-internal` (SIEMPRE)
 
 NO cargar `policies-shipping-zones` (no se usa la tabla).
 
@@ -131,6 +132,7 @@ NO cargar `policies-shipping-zones` (no se usa la tabla).
 - `policies-shipping-zones`
 - `policies-orders-coupons`
 - `policies-system`
+- `policies-internal` (SIEMPRE)
 
 Generar `scripts/setup-rls.sql` completo.
 
@@ -149,27 +151,10 @@ El archivo usa `TODO_TENANT_ID` como placeholder — el usuario hace Ctrl+H y lo
 #### 4.2 — `supabase-storage` ✅
 Igual que Emprendimiento.
 
-#### 4.3 — `rls-on-demand` ✅
-
-Plan: `empresa`.
-
-**Si Rama A (Envia):** cargar refs:
-- `policies-products`
-- `policies-categories`
-- `policies-orders-coupons`
-- `policies-system`
-
-NO cargar `policies-shipping-zones` (no se usa la tabla).
-
-**Si Rama B (zonas fijas):** cargar refs:
-- `policies-products`
-- `policies-categories`
-- `policies-shipping-zones`
-- `policies-orders-coupons`
-- `policies-system`
+> **Nota:** `rls-on-demand` ya se invocó en 4.1 — NO volver a invocarlo. El `setup-rls.sql` se genera UNA sola vez (incluye siempre el ref `policies-internal`).
 
 #### 4.4 — `mercadopago-connection` ✅
-Igual que Emprendimiento.
+Igual que Emprendimiento (incluye `lib/payments/status.ts`, validación de firma en el webhook y el setup SQL con `mp_webhook_secret` + RPC `increment_coupon_use`).
 
 ⚠️ **Pasarelas adicionales:** el plan Empresa contempla sumar otras pasarelas además de MercadoPago, pero no están definidas. Dejar comentario en `app/api/create-preference/route.ts`:
 
@@ -178,13 +163,15 @@ Igual que Emprendimiento.
 // Cuando se agregue otra pasarela, ramificar acá según `payment_provider`.
 ```
 
-#### 4.5 — `resend-email` ✅
-Igual que Emprendimiento.
+#### 4.5 — `smtp-email` ✅
+Igual que Emprendimiento (nodemailer/Hostinger).
 
 #### 4.6 — `umami-analytics` ✅
 Plan: `empresa`. Eventos: los de Emprendimiento + `checkout_step`, `conversion`, `checkout_abandoned`.
 
-Importante: el evento `conversion` se debe disparar desde el **webhook** de MercadoPago en la transición a approved, no desde `process-payment`.
+Importante: el evento `conversion` se dispara desde el **webhook** de MercadoPago en la transición a `paid`, no desde `process-payment`.
+
+> ⚠️ **El webhook corre en el servidor** — el helper `trackEvent()` (client-side, usa `window.umami`) NO funciona ahí. Para trackear server-side, crear `lib/analytics/umami-server.ts` con un POST a la API de Umami (`https://cloud.umami.is/api/send`, payload `{ type: "event", payload: { website: umami_website_id, name: "conversion", url: "/checkout/status", hostname: <dominio de tenants.url>, data: {...} } }`), leyendo `umami_website_id` y `url` con `getTenantConfig()`. Envolver en try/catch — analytics nunca rompe el webhook.
 
 #### 4.7 — `isr-on-demand` ✅
 Generar y configurar la revalidación on-demand (ISR) del caché leyendo el skill `isr-on-demand`. Asegurarse de crear los triggers SQL y el endpoint `/api/revalidate/route.ts`.
@@ -211,7 +198,7 @@ Todo lo de Emprendimiento, más:
 - [ ] INSERT del tenant con `max_products = NULL`
 - [ ] **Si Rama A:** `app/api/shipping/calculate/route.ts` usa `tenants.envia_access_token`. NO existe `app/api/shipping/zones/route.ts`. Tenant tiene `origin_*` completados.
 - [ ] **Si Rama B:** `app/api/shipping/zones/route.ts` lee de `shipping_zones`. NO existe `app/api/shipping/calculate/route.ts`. Tenant NO tiene `envia_access_token`.
-- [ ] `trackEvent("conversion", ...)` en el webhook de MercadoPago
+- [ ] Evento `conversion` enviado desde el webhook vía `lib/analytics/umami-server.ts` (server-side, NO `trackEvent` del cliente)
 - [ ] **Si 4.8 activo (Correo Argentino):** `lib/correo-argentino/client.ts` y `provinces.ts` presentes. `platform_config` tiene columnas `correo_argentino_*`. Webhook de MercadoPago importa envío a MiCorreo cuando `shipping_carrier = 'correo-argentino'`.
 - [ ] `npm run build` sin errores
 
@@ -231,14 +218,14 @@ Stack configurado:
 - Supabase Storage (bucket: objects → tabla: product_images) ✓
 - MercadoPago + cuotas + cupones + order_items ✓
 - Envíos automáticos via Envia.com (/api/shipping/calculate) ✓
-- Confirmación de pedidos → Resend ✓
+- Confirmación de pedidos → SMTP/Hostinger ✓
 - Umami Cloud + analítica de conversiones ✓
 - Auth lista para el admin panel externo ✓
 
 Próximos pasos:
 1. Completar credenciales en .env.local
 2. Ejecutar en Supabase SQL Editor (en orden):
-   a) INSERT del tenant con campos origin_* + envia_access_token + cargar mp/resend/umami
+   a) INSERT del tenant con campos origin_* + envia_access_token + cargar mp (access_token, public_key, webhook_secret) + smpt_user/smpt_pass + whatsapp + contact_email + url + umami + revalidation_secret
    b) scripts/setup-rls.sql (sin políticas de shipping_zones)
    c) scripts/seed-data.sql (productos + categorías + cupones — sin shipping_zones en Rama A)
 3. Invocar skill sitio-diseno para armar la UI con copy del rubro + imágenes Unsplash + animaciones
@@ -261,14 +248,14 @@ Stack configurado:
 - Supabase Storage (bucket: objects → tabla: product_images) ✓
 - MercadoPago + cuotas + cupones + order_items ✓
 - Envíos por zonas fijas leídas de shipping_zones (/api/shipping/zones) ✓
-- Confirmación de pedidos → Resend ✓
+- Confirmación de pedidos → SMTP/Hostinger ✓
 - Umami Cloud + analítica de conversiones ✓
 - Auth lista para el admin panel externo ✓
 
 Próximos pasos:
 1. Completar credenciales en .env.local
 2. Ejecutar en Supabase SQL Editor (en orden):
-   a) INSERT del tenant + cargar mp_access_token, mp_public_key, resend_api_key, umami_url
+   a) INSERT del tenant + cargar mp_access_token, mp_public_key, mp_webhook_secret, smpt_user, smpt_pass, whatsapp, contact_email, url, umami_url, umami_website_id, revalidation_secret
    b) scripts/setup-rls.sql (incluye políticas de shipping_zones)
    c) scripts/seed-data.sql (productos + categorías + zonas + cupones de prueba)
 3. Invocar skill sitio-diseno para armar la UI con copy del rubro + imágenes Unsplash + animaciones

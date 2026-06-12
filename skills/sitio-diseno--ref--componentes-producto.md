@@ -359,6 +359,8 @@ export function VariantSelector({
 
 ## CTA según plan
 
+> **WhatsApp:** el número viene de `tenants.whatsapp` (no de `.env`). La página de producto (Server Component) lo obtiene con `getTenantConfig()` y lo pasa como prop `whatsappNumber` a `WhatsAppProductButton`. Si es null, el botón no se renderiza.
+
 ### Esencial — botón WhatsApp
 
 ```tsx
@@ -370,11 +372,14 @@ import { trackEvent } from "@/lib/analytics/umami";
 interface Props {
   productName: string;
   variantName?: string;
+  whatsappNumber?: string | null;
 }
 
-export function WhatsAppProductButton({ productName, variantName }: Props) {
+export function WhatsAppProductButton({ productName, variantName, whatsappNumber }: Props) {
+  if (!whatsappNumber) return null;
+
   const fullName = variantName ? `${productName} - ${variantName}` : productName;
-  const url = buildWhatsAppLink({ productName: fullName });
+  const url = buildWhatsAppLink({ number: whatsappNumber, productName: fullName });
 
   return (
     <a

@@ -2,44 +2,43 @@
 
 Path destino: `.env.local.example`
 
-Variables base que aplican a TODOS los planes. Los scaffolds específicos pueden agregar más:
-- Esencial: solo las base.
-- Emprendimiento / Empresa: las base + agregar nada extra (las credenciales de MP y Resend van en la tabla `tenants` de Supabase, no en .env).
+**Estas 5 variables son las ÚNICAS que van en `.env`.** Aplican a TODOS los planes (Esencial, Emprendimiento, Empresa) sin excepción. Todo lo demás (WhatsApp, URL del sitio, email de contacto, Umami, credenciales SMTP, MercadoPago, Envia, Correo Argentino) se lee en runtime desde la base de datos.
 
 ```env
 # === Supabase ===
-NEXT_PUBLIC_SUPABASE_URL=
+# URL de la instancia (Dashboard → Settings → API). Sin trailing slash.
+NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
 # === Multi-tenant ===
 NEXT_PUBLIC_TENANT_ID=
 
-# === Sitio ===
-NEXT_PUBLIC_SITE_URL=https://tu-dominio.com.ar
-
-# === WhatsApp ===
-NEXT_PUBLIC_WHATSAPP_NUMBER=549XXXXXXXXXX
-
-# === Resend ===
-# Las API keys van en tenants.resend_api_key (Supabase). Estas son solo de configuración.
-RESEND_FROM_DOMAIN=tu-dominio.com.ar
-RESEND_FROM_EMAIL=noreply@tu-dominio.com.ar
-CONTACT_EMAIL=info@tu-dominio.com.ar
-
-# === Umami ===
-# IMPORTANTE: el ID debe ser el UUID que da Umami Cloud (ej: 550e8400-e29b-41d4-a716-446655440000)
-# NO poner emails ni texto libre — la API de Umami devuelve 400 con valores inválidos
-NEXT_PUBLIC_UMAMI_WEBSITE_ID=
-NEXT_PUBLIC_UMAMI_SRC=https://cloud.umami.is/script.js
-# Dominio de producción (sin https://) — evita que Umami dispare eventos en localhost
-NEXT_PUBLIC_SITE_DOMAIN=
+# === ISR on-demand ===
+# Fallback local del secret de revalidación. En producción el valor real
+# se lee de tenants.revalidation_secret. Generar con: openssl rand -hex 32
+REVALIDATE_SECRET=
 ```
 
-## Notas sobre credenciales
+## Regla de oro
 
-**MercadoPago (`mp_access_token`, `mp_public_key`):** NO van en .env. Se almacenan en `tenants.mp_access_token` y `tenants.mp_public_key`. Se leen en runtime desde la API.
+**NO agregar ninguna otra variable a `.env`.** Si una integración necesita una credencial o dato de configuración, ese dato vive en Supabase, no en `.env`:
 
-**Resend API key:** NO va en .env. Se almacena en `tenants.resend_api_key`. Lo único que va en .env son los datos del remitente/destinatario.
+| Dato | Dónde vive |
+|---|---|
+| Número de WhatsApp | `tenants.whatsapp` |
+| URL del sitio / dominio | `tenants.url` |
+| Email de contacto (destino del formulario) | `tenants.contact_email` |
+| Umami (script + website id) | `tenants.umami_url`, `tenants.umami_website_id` |
+| Credenciales SMTP del tenant | `tenants.smpt_user`, `tenants.smpt_pass` |
+| Host/puerto/SSL del servidor SMTP | `platform_config.host`, `platform_config.port`, `platform_config.ssl` |
+| MercadoPago | `tenants.mp_access_token`, `tenants.mp_public_key` |
+| Envia.com (plan Empresa) | `tenants.envia_access_token` + `tenants.origin_*` |
+| Correo Argentino (plan Empresa) | `platform_config.*` + `tenants.correo_argentino_customer_id` |
+| Secret de revalidación (producción) | `tenants.revalidation_secret` |
 
-**Envia.com (solo plan Empresa):** `tenants.envia_access_token` + `tenants.origin_*`.
+Estos datos se leen con el admin client (`lib/supabase/admin.ts`) vía el helper `getTenantConfig()` (`lib/config/tenant.ts`). Por eso `SUPABASE_SERVICE_ROLE_KEY` es la única credencial sensible que queda en `.env`: es la llave que permite leer la fila del tenant.
+
+## Por qué `SUPABASE_SERVICE_ROLE_KEY` se queda en `.env`
+
+El cliente admin (`service_role`) saltea RLS y es lo que usan los endpoints server-side (`tenant-config`, `contact`, webhook de pagos) y los triggers ISR para leer/escribir la fila de `tenants`. Es server-only — nunca se expone al cliente. Sin esta llave el sitio no puede leer su propia configuración.

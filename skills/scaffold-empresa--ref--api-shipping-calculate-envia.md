@@ -1,33 +1,44 @@
-# Reference: `app/api/shipping/calculate/route.ts` (Plan Empresa — Rama A: Envia.com)
+# Reference: Envia.com — `lib/shipping/envia.ts` + `app/api/shipping/calculate/route.ts` (Rama A)
 
-Path destino: `app/api/shipping/calculate/route.ts`
+**Solo crear estos archivos si el plan (Emprendimiento o Empresa) eligió Envia.com como provider de envíos.** Si eligió zonas fijas, usar `scaffold-emprendimiento--ref--api-shipping-zones.md`.
 
-**Solo crear este archivo si el plan Empresa eligió Envia.com como provider de envíos.** Si eligió zonas fijas, usar `scaffold-emprendimiento--ref--api-shipping-zones.md`.
+La lógica de cotización vive en `lib/shipping/envia.ts` para que la usen **dos** consumidores:
+1. `app/api/shipping/calculate/route.ts` — el checkout cotiza opciones para el comprador.
+2. `app/api/create-preference/route.ts` — re-cotiza server-side para **verificar** el costo elegido (nunca se confía en el `cost` del navegador).
 
-Endpoint que consulta tarifas reales a la API de Envia.com con origen (datos del tenant) y destino (dirección del comprador), y devuelve opciones de carriers (OCA, Andreani, Correo Argentino) con sus precios.
+**El peso y las dimensiones salen de la DB** (`products.weight_grams`, `length_cm`, `width_cm`, `height_cm`) — el cliente solo manda `product_id` + `quantity`.
+
+## Archivo 1 — `lib/shipping/envia.ts`
 
 ```typescript
-import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getTenantId } from "@/lib/tenant";
 
-interface ShippingAddress {
+export interface EnviaDestination {
   street: string;
   city: string;
-  postal_code: string;
   state: string;
+  postal_code: string;
 }
 
-export async function POST(request: NextRequest) {
-  const { destination, items } = (await request.json()) as {
-    destination: ShippingAddress;
-    items: Array<{ weight?: number; quantity: number }>;
-  };
+export interface EnviaOption {
+  carrier: string;
+  service: string;
+  price: number;
+  estimated_delivery: string | null;
+}
 
-  if (!destination?.postal_code) {
-    return NextResponse.json({ error: "Destino inválido" }, { status: 400 });
-  }
+export class EnviaConfigError extends Error {}
 
-  const tenantId = process.env.NEXT_PUBLIC_TENANT_ID;
+/**
+ * Cotiza envíos contra la API de Envia.com.
+ * Peso y dimensiones se leen de products en la DB — nunca del cliente.
+ */
+export async function quoteEnvia(
+  destination: EnviaDestination,
+  items: Array<{ product_id: string; quantity: number }>
+): Promise<EnviaOption[]> {
+  const tenantId = getTenantId();
   const supabaseAdmin = createAdminClient();
 
   const { data: tenant } = await supabaseAdmin
@@ -39,12 +50,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (!tenant?.envia_access_token) {
-    return NextResponse.json(
-      { error: "Envíos no configurados para este tenant" },
-      { status: 503 }
-    );
+    throw new EnviaConfigError("Envíos no configurados para este tenant");
   }
-
   if (
     !tenant.origin_name ||
     !tenant.origin_address ||
@@ -52,56 +59,76 @@ export async function POST(request: NextRequest) {
     !tenant.origin_postal_code ||
     !tenant.origin_state
   ) {
-    return NextResponse.json(
-      { error: "Datos de origen incompletos en el tenant" },
-      { status: 503 }
-    );
+    throw new EnviaConfigError("Datos de origen incompletos en el tenant");
   }
 
-  try {
-    const response = await fetch("https://api.envia.com/ship/rate/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${tenant.envia_access_token}`,
+  // Peso y dimensiones reales desde la DB
+  const productIds = [...new Set(items.map((i) => i.product_id))];
+  const { data: products } = await supabaseAdmin
+    .from("products")
+    .select("id, weight_grams, length_cm, width_cm, height_cm, shipping_required")
+    .eq("tenant_id", tenantId)
+    .in("id", productIds);
+
+  let totalWeightKg = 0;
+  let maxLength = 0;
+  let maxWidth = 0;
+  let maxHeight = 0;
+
+  for (const item of items) {
+    const p = (products ?? []).find((x) => x.id === item.product_id);
+    if (!p || p.shipping_required === false) continue;
+    totalWeightKg += ((p.weight_grams ?? 500) / 1000) * item.quantity;
+    maxLength = Math.max(maxLength, Number(p.length_cm ?? 0));
+    maxWidth = Math.max(maxWidth, Number(p.width_cm ?? 0));
+    maxHeight = Math.max(maxHeight, Number(p.height_cm ?? 0));
+  }
+
+  const response = await fetch("https://api.envia.com/ship/rate/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${tenant.envia_access_token}`,
+    },
+    body: JSON.stringify({
+      origin: {
+        name: tenant.origin_name,
+        phone: tenant.origin_phone,
+        street: tenant.origin_address,
+        city: tenant.origin_city,
+        state: tenant.origin_state,
+        postal_code: tenant.origin_postal_code,
+        country: "AR",
       },
-      body: JSON.stringify({
-        origin: {
-          name: tenant.origin_name,
-          phone: tenant.origin_phone,
-          street: tenant.origin_address,
-          city: tenant.origin_city,
-          state: tenant.origin_state,
-          postal_code: tenant.origin_postal_code,
-          country: "AR",
-        },
-        destination: {
-          street: destination.street,
-          city: destination.city,
-          state: destination.state,
-          postal_code: destination.postal_code,
-          country: "AR",
-        },
-        packages: [
-          {
-            weight: items.reduce(
-              (acc, item) => acc + (item.weight ?? 0.5) * item.quantity,
-              0
-            ),
-            dimensions: { length: 20, width: 20, height: 10 },
+      destination: {
+        street: destination.street,
+        city: destination.city,
+        state: destination.state,
+        postal_code: destination.postal_code,
+        country: "AR",
+      },
+      packages: [
+        {
+          weight: Math.max(totalWeightKg, 0.1),
+          dimensions: {
+            length: maxLength || 20,
+            width: maxWidth || 20,
+            height: maxHeight || 10,
           },
-        ],
-        shipment: { carrier: "all" },
-      }),
-    });
+        },
+      ],
+      shipment: { carrier: "all" },
+    }),
+  });
 
-    if (!response.ok) {
-      throw new Error(`Envia.com error: ${response.status}`);
-    }
+  if (!response.ok) {
+    throw new Error(`Envia.com error: ${response.status}`);
+  }
 
-    const data = await response.json();
+  const data = await response.json();
 
-    const options = (data.data ?? []).map((rate: {
+  return (data.data ?? []).map(
+    (rate: {
       carrier: string;
       service: string;
       totalPrice: number;
@@ -111,10 +138,35 @@ export async function POST(request: NextRequest) {
       service: rate.service,
       price: rate.totalPrice,
       estimated_delivery: rate.deliveryDate ?? null,
-    }));
+    })
+  );
+}
+```
 
+## Archivo 2 — `app/api/shipping/calculate/route.ts`
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { quoteEnvia, EnviaConfigError } from "@/lib/shipping/envia";
+
+export async function POST(request: NextRequest) {
+  const { destination, items } = (await request.json()) as {
+    destination: { street: string; city: string; state: string; postal_code: string };
+    items: Array<{ product_id: string; quantity: number }>;
+  };
+
+  if (!destination?.postal_code || !items?.length) {
+    return NextResponse.json({ error: "Destino inválido" }, { status: 400 });
+  }
+
+  try {
+    const options = await quoteEnvia(destination, items);
     return NextResponse.json({ options });
   } catch (error) {
+    if (error instanceof EnviaConfigError) {
+      // No silenciar — el comprador debe ver "envíos no disponibles"
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
     console.error("Error calculando envío:", error);
     return NextResponse.json(
       { error: "No se pudo calcular el costo de envío" },
@@ -126,15 +178,14 @@ export async function POST(request: NextRequest) {
 
 ## Cómo lo consume el checkout
 
-El comprador ingresa su dirección + CP → el form llama a `POST /api/shipping/calculate` con `{ destination, items }` → recibe opciones reales de carriers → elige una.
+El comprador ingresa su dirección + CP → el form llama a `POST /api/shipping/calculate` con `{ destination, items: [{product_id, quantity}] }` → recibe opciones reales de carriers → elige una.
 
-El payload a `/api/create-preference` lleva:
+El payload a `/api/create-preference` lleva **la opción elegida, sin costo** (el server re-cotiza y verifica):
 
 ```typescript
 shipping: {
   carrier: "OCA",                    // del response de Envia
   service: "Estándar",               // del response de Envia
-  cost: 1850,
   street: "Av. Corrientes 1234",
   city: "Buenos Aires",
   state: "CABA",
@@ -142,11 +193,11 @@ shipping: {
 }
 ```
 
-Esto pobla las columnas `shipping_carrier`, `shipping_service`, `shipping_cost`, `shipping_postal_code` y el JSONB `shipping_address` en `orders`.
+`create-preference` vuelve a llamar a `quoteEnvia()`, matchea `carrier + service` y usa **ese** precio. Esto pobla las columnas `shipping_carrier`, `shipping_service`, `shipping_cost`, `shipping_postal_code` y el JSONB `shipping_address` en `orders`.
 
 ## Notas importantes
 
-- **Si falta `envia_access_token` o algún `origin_*`, el endpoint devuelve 503 con mensaje claro.** No silenciar el error — el comprador debe ver "envíos no disponibles" para que sepa que algo falla.
-- El peso default por ítem es `0.5kg`. Si los productos tienen peso definido en la base, usarlo en lugar del default. Hoy el schema no tiene columna `weight` en `products` — para implementarlo, agregar la columna o gestionar peso desde el admin panel.
-- Las dimensiones default son `20x20x10cm`. Para productos grandes el cliente debería poder configurarlas (mejora futura).
+- **Si falta `envia_access_token` o algún `origin_*`, el endpoint devuelve 503 con mensaje claro.** No silenciar el error.
+- **Peso y dimensiones vienen de `products`** (`weight_grams` con default 500g, `length_cm`/`width_cm`/`height_cm` con default 20×20×10). Cargar esos campos al crear productos mejora la precisión de la cotización.
+- Los productos con `shipping_required = false` (servicios) no suman peso.
 - La API de Envia.com puede cambiar — verificar con su documentación oficial: [envia.com/api](https://envia.com).

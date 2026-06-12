@@ -1,4 +1,6 @@
-# Reference: `lib/email/send.ts`
+# Reference: `lib/email/send.ts` — ⚠️ DEPRECADO
+
+> **⚠️ DEPRECADO.** Usar `smtp-email--ref--lib-email-send.md` (nodemailer/Hostinger). Este ref describe la versión vieja con Resend.
 
 Path destino: `lib/email/send.ts`
 

@@ -1,6 +1,6 @@
 ---
 name: scaffold-esencial
-description: Crea desde cero la estructura base de un sitio Next.js para un cliente del plan Esencial de SitioHoy ($25.000/mes). Invoca primero scaffold-base, luego agrega el catálogo de hasta 50 productos con categorías, subcategorías y variantes (display only), imágenes via tabla product_images, formulario de contacto vía Resend, WhatsApp CTAs, y Umami Cloud analytics. NO incluye carrito, checkout, MercadoPago ni cupones. El panel admin se conecta externamente. Al terminar queda listo para el skill de diseño. Usar cuando el usuario diga "crear sitio esencial", "scaffold cliente esencial", o similar.
+description: Crea desde cero la estructura base de un sitio Next.js para un cliente del plan Esencial de SitioHoy ($25.000/mes). Invoca primero scaffold-base, luego agrega el catálogo de hasta 50 productos con categorías, subcategorías y variantes (display only), imágenes via tabla product_images, formulario de contacto vía SMTP/Hostinger (skill smtp-email), WhatsApp CTAs, y Umami Cloud analytics. NO incluye carrito, checkout, MercadoPago ni cupones. El panel admin se conecta externamente. Al terminar queda listo para el skill de diseño. Usar cuando el usuario diga "crear sitio esencial", "scaffold cliente esencial", o similar.
 ---
 
 # Skill: Scaffold — Plan Esencial
@@ -17,7 +17,7 @@ Si no fueron provistos, preguntar:
 4. Dominio final (ej: `gildedglow.com.ar`)
 5. Número de WhatsApp del negocio (ej: `5491112345678`)
 6. ¿Carpeta vacía o monorepo? (default: carpeta vacía)
-7. ¿Credenciales listas? (Supabase, Resend, Umami) — si no, placeholders
+7. ¿Credenciales listas? (Supabase, SMTP/Hostinger, Umami) — si no, placeholders
 
 ---
 
@@ -28,7 +28,7 @@ Si no fueron provistos, preguntar:
 | Framework | Next.js App Router (`proxy.ts`, NO `middleware.ts`) |
 | DB / Auth | Supabase multi-tenant |
 | Storage | Supabase Storage (bucket `objects`, tabla `product_images`) |
-| Emails | Resend (formulario de contacto) |
+| Emails | SMTP/Hostinger vía nodemailer (formulario de contacto) — skill `smtp-email` |
 | Analytics | Umami Cloud |
 | Pagos | ❌ Ninguno (CTAs a WhatsApp) |
 
@@ -72,6 +72,7 @@ Cargar refs:
 - `policies-products`
 - `policies-categories`
 - `policies-system`
+- `policies-internal` (SIEMPRE — protege platform_config, contact_messages, etc.)
 
 NO cargar `policies-shipping-zones` ni `policies-orders-coupons` (Esencial no los usa).
 
@@ -100,13 +101,13 @@ Generar y configurar la revalidación on-demand (ISR) del caché leyendo el skil
 ## Verificación
 
 - [ ] `proxy.ts` en raíz (NO `middleware.ts`)
-- [ ] `lib/whatsapp.ts` usa `NEXT_PUBLIC_WHATSAPP_NUMBER`
+- [ ] `lib/whatsapp.ts` recibe el número por parámetro — el número vive en `tenants.whatsapp` (server: `getTenantConfig()`, client: `/api/tenant-config`). NO existe `NEXT_PUBLIC_WHATSAPP_NUMBER`
 - [ ] `app/api/contact/route.ts` funcional (de scaffold-base)
 - [ ] `app/(public)/catalogo/page.tsx` query a Supabase con `.limit(50)`
 - [ ] `app/(public)/producto/[slug]/page.tsx` trae producto + imágenes + variantes
 - [ ] **No existe** ningún archivo de checkout, carrito, órdenes ni MercadoPago
 - [ ] **No existe** ningún directorio `app/admin/` (panel es externo)
-- [ ] `package.json` incluye: `@supabase/ssr`, `@supabase/supabase-js`, `resend`. **NO incluye** `mercadopago`
+- [ ] `package.json` incluye: `@supabase/ssr`, `@supabase/supabase-js`, `nodemailer`. **NO incluye** `mercadopago` ni `resend`
 - [ ] `scripts/setup-rls.sql` presente
 - [ ] `npm run build` sin errores
 
@@ -122,7 +123,7 @@ Stack configurado:
 - Supabase multi-tenant (tenant_id: {uuid}) ✓
 - Catálogo hasta 50 productos con categorías, subcategorías y variantes ✓
 - Supabase Storage (bucket: objects → tabla: product_images) ✓
-- Formulario de contacto → Resend ✓
+- Formulario de contacto → SMTP/Hostinger ✓
 - WhatsApp CTAs (número: {whatsapp}) ✓
 - Umami Cloud analytics ✓
 - Auth lista para el admin panel externo ✓

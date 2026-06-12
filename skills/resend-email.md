@@ -1,6 +1,16 @@
 ---
 name: resend-email
-description: Configura el envío de emails transaccionales con Resend en proyectos Next.js de SitioHoy. Provee función genérica de envío y un template configurable de confirmación de pago (con items, descuento por cupón, desglose de envío). Multi-tenant — la API key se almacena por tenant en Supabase. Invocado por scaffolds y por mercadopago-connection (que dispara los emails). Usar cuando se quiera configurar Resend, enviar emails transaccionales, o crear nuevos templates.
+description: "[ARCHIVADO — NO ACTIVAR. Usar el skill smtp-email] Integración de emails transaccionales con Resend, fuera de uso. Se conserva únicamente por si en el futuro se vuelve a Resend. Ninguna mención a 'emails', 'mails transaccionales' o 'confirmaciones' debe activar este skill — eso es smtp-email. Solo leer este archivo si el usuario pide EXPLÍCITAMENTE 'usar Resend' o 'volver a Resend'."
+---
+
+# Skill: Resend Email — ⛔ ARCHIVADO (no activar)
+
+> **⛔ STOP. Si llegaste acá buscando cómo enviar emails, este NO es el skill: usar `smtp-email` (SMTP/Hostinger con nodemailer).**
+>
+> Este skill solo se sigue si el usuario pidió **explícitamente y por nombre** volver a usar Resend. En cualquier otro caso, cerrar este archivo y leer `smtp-email`.
+>
+> Contexto: el envío de emails se hace por **SMTP (Hostinger) con nodemailer**. Hostinger es más barato que Resend y permite múltiples buzones. Las credenciales viven en `tenants.smpt_user` / `tenants.smpt_pass` (no más `tenants.resend_api_key`) y el servidor en `platform_config`. Este archivo se conserva como referencia por si la plataforma vuelve a Resend en el futuro.
+
 ---
 
 # Skill: Resend Email

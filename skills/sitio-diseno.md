@@ -134,7 +134,7 @@ Cargar SIEMPRE (obligatorios en todas las plantillas):
 - Una razón para confiar (historia, proceso, valores, diferencial)
 - **Sección de Preguntas Frecuentes** — leer skill `seccion-faq.md`. Diseño libre, contenido adaptado al rubro. NUNCA repetir el mismo layout entre plantillas.
 - Un cierre que invite a actuar (pedir, reservar, contactar)
-- **Branding SitioHoy en el footer** — leer skill `footer-branding-sitiohoy.md`. Componente `<SitioHoyBranding />` como última franja del footer. Logo en `#10b981`, 20px.
+- **Branding SitioHoy en el footer** — leer skill `footer-branding-sitiohoy.md`. Componente `<SitioHoyBranding />` como última franja del footer. Logo PNG real (assets de las skills → `public/sitiohoy-logo.png`), 20px.
 
 **Decisiones LIBRES — innovar en cada plantilla:**
 
@@ -284,7 +284,7 @@ Cargar `plantilla-qa.md` y ejecutar el QA completo.
 - [ ] Checkout completo (si aplica al plan).
 - [ ] WhatsAppFloat visible en mobile sin tapar contenido.
 - [ ] **`<FAQSection />`** presente en la Home con mínimo 5 preguntas del rubro. Diseño diferente a otras plantillas.
-- [ ] **`<SitioHoyBranding />`** presente al final del footer. Logo 20px en `#10b981` (o fallback si fondo verde). Link a sitiohoy.com.ar.
+- [ ] **`<SitioHoyBranding />`** presente al final del footer. Logo PNG 20px (`public/sitiohoy-logo.png`, versión light si fondo verde). Link a sitiohoy.com.ar.
 
 ### Animaciones (obligatorias)
 - [ ] Hero con entrada animada (stagger o reveal).

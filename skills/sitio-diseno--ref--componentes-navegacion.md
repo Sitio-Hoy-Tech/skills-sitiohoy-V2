@@ -4,6 +4,17 @@ Header, Footer y menú mobile. Estos componentes están en TODAS las páginas �
 
 **Este archivo es REFERENCIA TÉCNICA** — muestra patrones de implementación en Next.js (shrink al scroll, mobile drawer, etc.). Los ejemplos de abajo son VARIACIONES para inspirarte, no las únicas opciones. Diseñá el header y footer como quieras. Consultá `sitio-diseno--ref--inspiracion-diseno.md` para más ideas.
 
+> **WhatsApp:** el número ya NO sale de `.env`. Vive en `tenants.whatsapp`. Los componentes que muestran el CTA de WhatsApp (`Footer`, `FooterCTA`, `WhatsAppFloat`) reciben `whatsappNumber` por prop. El layout público (Server Component) lo obtiene con `getTenantConfig()` y lo pasa hacia abajo:
+> ```tsx
+> // app/(public)/layout.tsx
+> import { getTenantConfig } from "@/lib/config/tenant";
+> const tenant = await getTenantConfig();
+> // ...
+> <WhatsAppFloat whatsappNumber={tenant.whatsapp} />
+> <Footer brandName={tenant.name} whatsappNumber={tenant.whatsapp} />
+> ```
+> Si `tenant.whatsapp` es null, el CTA no se renderiza.
+
 ---
 
 ## ⚠️ REGLA CRÍTICA: Header visible en TODAS las páginas
@@ -405,9 +416,10 @@ import { SitioHoyBranding } from "./SitioHoyBranding";
 interface FooterProps {
   brandName: string;
   brandTagline?: string;
+  whatsappNumber?: string | null;
 }
 
-export function Footer({ brandName, brandTagline }: FooterProps) {
+export function Footer({ brandName, brandTagline, whatsappNumber }: FooterProps) {
   const year = new Date().getFullYear();
 
   return (
@@ -438,16 +450,18 @@ export function Footer({ brandName, brandTagline }: FooterProps) {
           <div>
             <p className="font-body text-xs uppercase tracking-[0.2em] text-neutral-50/50 mb-4">Contacto</p>
             <ul className="space-y-3">
-              <li>
-                <a
-                  href={buildWhatsAppLink()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-body hover:text-brand-primary transition-colors"
-                >
-                  WhatsApp
-                </a>
-              </li>
+              {whatsappNumber && (
+                <li>
+                  <a
+                    href={buildWhatsAppLink({ number: whatsappNumber })}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-body hover:text-brand-primary transition-colors"
+                  >
+                    WhatsApp
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>
@@ -517,10 +531,11 @@ Un CTA grande de conversión arriba + datos de contacto abajo. Para diseños que
 import Link from "next/link";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 
-export function FooterCTA({ brandName, ctaText, ctaHref }: {
+export function FooterCTA({ brandName, ctaText, ctaHref, whatsappNumber }: {
   brandName: string;
   ctaText?: string;
   ctaHref?: string;
+  whatsappNumber?: string | null;
 }) {
   const year = new Date().getFullYear();
 
@@ -539,14 +554,16 @@ export function FooterCTA({ brandName, ctaText, ctaHref }: {
             >
               Contactanos
             </Link>
-            <a
-              href={buildWhatsAppLink()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 border-2 border-neutral-900 text-neutral-900 px-10 py-4 font-medium hover:bg-neutral-900 hover:text-neutral-50 transition-colors"
-            >
-              WhatsApp
-            </a>
+            {whatsappNumber && (
+              <a
+                href={buildWhatsAppLink({ number: whatsappNumber })}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 border-2 border-neutral-900 text-neutral-900 px-10 py-4 font-medium hover:bg-neutral-900 hover:text-neutral-50 transition-colors"
+              >
+                WhatsApp
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -585,8 +602,10 @@ Componente fijo en bottom-right en mobile, opcional en desktop.
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { trackEvent } from "@/lib/analytics/umami";
 
-export function WhatsAppFloat() {
-  const url = buildWhatsAppLink();
+export function WhatsAppFloat({ whatsappNumber }: { whatsappNumber?: string | null }) {
+  if (!whatsappNumber) return null;
+
+  const url = buildWhatsAppLink({ number: whatsappNumber });
 
   return (
     <a

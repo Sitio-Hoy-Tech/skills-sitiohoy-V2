@@ -1,6 +1,6 @@
 ---
 name: rls-on-demand
-description: Genera el archivo scripts/setup-rls.sql con políticas Row Level Security de Supabase para proyectos SitioHoy. Conoce qué tablas son públicas vs privadas según el plan (Esencial / Emprendimiento / Empresa con Envia / Empresa con zonas fijas), y arma el SQL listo para pegar en el SQL Editor. Invocado por todos los scaffolds. Usar cuando el usuario diga "configurar RLS", "agregar políticas de seguridad", "proteger tablas", o cuando un scaffold lo pida en su flujo.
+description: Genera el archivo scripts/setup-rls.sql con políticas Row Level Security de Supabase para proyectos SitioHoy. Conoce qué tablas son públicas vs privadas según el plan (Esencial / Emprendimiento o Empresa, cada uno con Envia o con zonas fijas), incluye SIEMPRE el bloque deny-all de tablas internas (platform_config, contact_messages, etc.), y arma el SQL listo para pegar en el SQL Editor. Invocado por todos los scaffolds UNA sola vez (paso 4.1). Usar cuando el usuario diga "configurar RLS", "agregar políticas de seguridad", "proteger tablas", o cuando un scaffold lo pida en su flujo.
 ---
 
 # Skill: RLS On Demand
@@ -37,10 +37,13 @@ tenant_id IN (
 
 | Plan | Refs a cargar |
 |---|---|
-| **Esencial** | `policies-products` + `policies-categories` + `policies-system` |
-| **Emprendimiento** | `policies-products` + `policies-categories` + `policies-shipping-zones` + `policies-orders-coupons` + `policies-system` |
-| **Empresa con zonas fijas** | Igual que Emprendimiento |
-| **Empresa con Envia.com** | Igual que Emprendimiento **menos** `policies-shipping-zones` |
+| **Esencial** | `policies-products` + `policies-categories` + `policies-system` + `policies-internal` |
+| **Emprendimiento con zonas fijas** | `policies-products` + `policies-categories` + `policies-shipping-zones` + `policies-orders-coupons` + `policies-system` + `policies-internal` |
+| **Emprendimiento con Envia.com** | Igual que Emprendimiento con zonas **menos** `policies-shipping-zones` |
+| **Empresa con zonas fijas** | Igual que Emprendimiento con zonas fijas |
+| **Empresa con Envia.com** | Igual que Emprendimiento con Envia.com |
+
+> ⚠️ **`policies-internal` va SIEMPRE, en todos los planes.** Habilita RLS deny-all en `platform_config`, `contact_messages`, `payment_events`, `order_events`, `crm_webhook_config`, blog y atributos. Sin ese bloque, la anon key (pública en el bundle JS) puede leer credenciales de la plataforma y datos personales de todos los tenants.
 
 ---
 
@@ -106,6 +109,18 @@ BEGIN
 END $$;
 ```
 
+### Mostrar el UUID (ÚLTIMA LÍNEA del script — obligatoria)
+
+El SQL Editor de Supabase **no siempre muestra los `RAISE NOTICE`** de los bloques `DO`. Para garantizar que el usuario vea el UUID, el script SIEMPRE termina con un SELECT (el resultado sí aparece en el panel de resultados):
+
+```sql
+-- =============================================
+-- ÚLTIMO PASO: el UUID del tenant aparece acá abajo.
+-- Copiarlo en .env.local (NEXT_PUBLIC_TENANT_ID) y en seed-data.sql (Ctrl+H TODO_TENANT_ID).
+-- =============================================
+SELECT id AS tenant_uuid, slug, name FROM public.tenants WHERE slug = '{slug}';
+```
+
 > **Nota:** el `max_products` varía por plan: `50` (Esencial), `200` (Emprendimiento), `NULL` (Empresa). El `{slug}` debe ser kebab-case ASCII sin tildes.
 
 ### Habilitar RLS
@@ -141,6 +156,9 @@ En este orden:
 3. `rls-on-demand--ref--policies-shipping-zones.md` → solo si aplica.
 4. `rls-on-demand--ref--policies-orders-coupons.md` → solo Emprendimiento/Empresa.
 5. `rls-on-demand--ref--policies-system.md` → políticas de `tenants` y `user_tenants` (siempre).
+6. `rls-on-demand--ref--policies-internal.md` → RLS deny-all en tablas internas (**siempre, todos los planes**).
+
+Y cerrar el archivo con el `SELECT id AS tenant_uuid ...` (ver arriba).
 
 ---
 

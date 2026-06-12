@@ -87,12 +87,14 @@ Donde sea que se llame `getProductBySlug(slug)`, la llamada no cambia — solo l
 
 ## 4. Endpoint /api/revalidate
 
-`app/api/revalidate/route.ts` — el secret se lee del tenant en Supabase (no de env var), con fallback a `REVALIDATION_SECRET` para compatibilidad local:
+`app/api/revalidate/route.ts` — el secret se lee del tenant en Supabase (no de env var), con fallback a `REVALIDATE_SECRET` para compatibilidad local.
+
+> ⚠️ **NO usar `getTenantConfig()` acá.** Ese helper está cacheado con el tag `tenant-config-{id}`. Si el secret cambia en la DB, el endpoint compararía contra el secret viejo cacheado, rechazaría la llamada del trigger con el secret nuevo, y el tag nunca se invalidaría (deadlock). El secret se lee con query directa — este endpoint se llama poco, el roundtrip no importa.
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
-import { getTenantConfig } from '@/lib/supabase/tenant'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID!
 
@@ -107,8 +109,15 @@ const TABLE_TAGS: Record<string, string[]> = {
 }
 
 export async function POST(req: NextRequest) {
-  const tenant = await getTenantConfig()
-  const secret = tenant.revalidation_secret ?? process.env.REVALIDATION_SECRET
+  // Query directa SIN caché — ver nota arriba (deadlock con getTenantConfig)
+  const supabaseAdmin = createAdminClient()
+  const { data: tenant } = await supabaseAdmin
+    .from('tenants')
+    .select('revalidation_secret')
+    .eq('id', TENANT_ID)
+    .single()
+
+  const secret = tenant?.revalidation_secret ?? process.env.REVALIDATE_SECRET
 
   const auth = req.headers.get('authorization')
   if (!secret || auth !== `Bearer ${secret}`) {
@@ -250,6 +259,20 @@ DROP TRIGGER IF EXISTS isr_coupons ON public.coupons;
 CREATE TRIGGER isr_coupons
 AFTER INSERT OR UPDATE OR DELETE ON public.coupons
 FOR EACH ROW EXECUTE FUNCTION trigger_isr_coupons();
+
+-- tenants: invalida el tag tenant-config-{id} que cachea getTenantConfig()
+-- (al editar WhatsApp, Umami, credenciales, etc. la config se refresca sola)
+CREATE OR REPLACE FUNCTION trigger_isr_tenants()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  PERFORM isr_notify(NEW.id, 'tenants');
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS isr_tenants ON public.tenants;
+CREATE TRIGGER isr_tenants
+AFTER UPDATE ON public.tenants
+FOR EACH ROW EXECUTE FUNCTION trigger_isr_tenants();
 ```
 
 > **Importante:** `supabase_functions.http_request` NO acepta argumentos posicionales en esta versión de Supabase. Usar siempre `net.http_post` con parámetros nombrados (`url :=`, `body :=`, `headers :=`).

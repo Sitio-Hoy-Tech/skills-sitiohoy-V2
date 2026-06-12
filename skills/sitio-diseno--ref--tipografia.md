@@ -137,16 +137,18 @@ const bodyFont = EB_Garamond({
   weight: ["400", "500", "600"],
 });
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC || "https://cloud.umami.is/script.js";
-  const umamiId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const tenant = await getTenantConfig();
+  const umamiSrc = tenant.umami_url || "https://cloud.umami.is/script.js";
+  const umamiId = tenant.umami_website_id;
+  const siteDomain = getSiteDomain(tenant.url);
 
   return (
     <html lang="es" className={`${displayFont.variable} ${bodyFont.variable}`}>
       <head />
       <body>
         {umamiId && (
-          <Script src={umamiSrc} data-website-id={umamiId} strategy="afterInteractive" />
+          <Script src={umamiSrc} data-website-id={umamiId} data-domains={siteDomain ?? undefined} strategy="afterInteractive" />
         )}
         {children}
       </body>
@@ -154,6 +156,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 ```
+
+> El import: `import { getTenantConfig, getSiteDomain } from "@/lib/config/tenant";` (los datos de Umami salen de `tenants`, no de `.env`).
 
 **`app/globals.css`** — tokens de fuente en `@theme {}`:
 
@@ -196,13 +200,15 @@ const bodyFont = EB_Garamond({
   weight: ["400", "500", "600"],
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC || "https://cloud.umami.is/script.js";
-  const umamiId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
+  const tenant = await getTenantConfig();
+  const umamiSrc = tenant.umami_url || "https://cloud.umami.is/script.js";
+  const umamiId = tenant.umami_website_id;
+  const siteDomain = getSiteDomain(tenant.url);
 
   return (
     <html lang="es" className={`${displayFont.variable} ${bodyFont.variable}`}>
@@ -212,6 +218,7 @@ export default function RootLayout({
           <Script
             src={umamiSrc}
             data-website-id={umamiId}
+            data-domains={siteDomain ?? undefined}
             strategy="afterInteractive"
           />
         )}
@@ -221,6 +228,8 @@ export default function RootLayout({
   );
 }
 ```
+
+> El import: `import { getTenantConfig, getSiteDomain } from "@/lib/config/tenant";` (los datos de Umami salen de `tenants`, no de `.env`).
 
 **`tailwind.config.ts`** (solo en v3):
 

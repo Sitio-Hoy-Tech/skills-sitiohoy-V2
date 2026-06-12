@@ -35,13 +35,11 @@ export async function GET() {
 
 ## Cómo lo consume el checkout
 
-El form de checkout (que arma `sitio-diseno`) llama a `GET /api/shipping/zones` y muestra las opciones al comprador como radios o select. Cuando el comprador elige una, el payload a `/api/create-preference` lleva:
+El form de checkout (que arma `sitio-diseno`) llama a `GET /api/shipping/zones` y muestra las opciones al comprador como radios o select. Cuando el comprador elige una, el payload a `/api/create-preference` lleva **el id de la zona, NO el precio** (el server busca el precio en la DB — nunca se confía en un costo que venga del navegador):
 
 ```typescript
 shipping: {
-  carrier: zone.name,        // "CABA", "GBA", etc.
-  service: undefined,        // null en zonas fijas
-  cost: zone.price,
+  zone_id: zone.id,          // el server resuelve nombre y precio desde shipping_zones
   street: ...,               // dirección que ingresó el comprador
   city: ...,
   state: ...,

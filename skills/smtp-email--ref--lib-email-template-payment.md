@@ -1,10 +1,8 @@
-# Reference: `lib/email/templates/payment.ts` — ⚠️ DEPRECADO
-
-> **⚠️ DEPRECADO.** El template es idéntico en `smtp-email--ref--lib-email-template-payment.md`. Usar ese (el skill activo es `smtp-email`).
+# Reference: `lib/email/templates/payment.ts`
 
 Path destino: `lib/email/templates/payment.ts`
 
-Template HTML de confirmación de pago. Acepta items, descuento por cupón, desglose de envío. Configurable via colores y título.
+Template HTML de confirmación de pago. Acepta items, descuento por cupón, desglose de envío. Configurable via colores y título. **Agnóstico del proveedor de envío** — se usa igual con SMTP que con cualquier otro transporte.
 
 ```typescript
 interface PaymentEmailItems {

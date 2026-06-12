@@ -2,20 +2,24 @@
 
 Path destino: `app/layout.tsx`
 
-Root layout que inyecta el script de Umami solo si `NEXT_PUBLIC_UMAMI_WEBSITE_ID` está definido. **El skill `sitio-diseno` después agrega las fuentes y demás configuración visual a este mismo archivo.**
+Root layout que inyecta el script de Umami solo si el tenant tiene `umami_website_id` configurado. **El skill `sitio-diseno` después agrega las fuentes y demás configuración visual a este mismo archivo.**
+
+Los datos de Umami ya **no salen de `.env`** — viven en `tenants` (`umami_url`, `umami_website_id`) y el dominio se deriva de `tenants.url`. Por eso el layout es `async` y usa `getTenantConfig()`.
 
 ```typescript
 import Script from "next/script";
+import { getTenantConfig, getSiteDomain } from "@/lib/config/tenant";
 import "./globals.css";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const umamiSrc =
-    process.env.NEXT_PUBLIC_UMAMI_SRC || "https://cloud.umami.is/script.js";
-  const umamiId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
+  const tenant = await getTenantConfig();
+  const umamiSrc = tenant.umami_url || "https://cloud.umami.is/script.js";
+  const umamiId = tenant.umami_website_id;
+  const siteDomain = getSiteDomain(tenant.url);
 
   return (
     <html lang="es">
@@ -25,7 +29,7 @@ export default function RootLayout({
           <Script
             src={umamiSrc}
             data-website-id={umamiId}
-            data-domains={process.env.NEXT_PUBLIC_SITE_DOMAIN}
+            data-domains={siteDomain ?? undefined}
             strategy="afterInteractive"
           />
         )}
@@ -45,13 +49,21 @@ Cuando `data-domains` está presente, el script de Umami **solo envía eventos c
 
 Sin `data-domains`, el script intenta enviar eventos desde localhost y la API de Umami responde `400` porque el website ID no está registrado para ese origen.
 
-## Variable de entorno requerida
+El dominio se deriva automáticamente de `tenants.url` con `getSiteDomain()` (quita el protocolo y el path). Ya no hace falta una variable aparte.
 
-```env
-NEXT_PUBLIC_SITE_DOMAIN=cafedelnorte.com.ar
+## Configuración en Supabase
+
+En la fila del tenant (`tenants`):
+
+```sql
+UPDATE public.tenants SET
+  umami_url = 'https://cloud.umami.is/script.js',
+  umami_website_id = '550e8400-e29b-41d4-a716-446655440000', -- UUID que da Umami Cloud
+  url = 'https://cafedelnorte.com.ar'
+WHERE id = '{TENANT_ID}';
 ```
 
-Agregar al `.env.local` de cada proyecto. El valor es el dominio de producción **sin** `https://`.
+> **IMPORTANTE:** `umami_website_id` debe ser el UUID que da Umami Cloud. NO poner emails ni texto libre — la API de Umami devuelve 400 con valores inválidos.
 
 ## Nota
 

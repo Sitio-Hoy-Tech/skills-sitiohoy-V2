@@ -2,12 +2,20 @@
 
 Path destino: `app/api/process-payment/route.ts`
 
-Recibe los datos del Payment Brick, crea el pago en MP, actualiza la orden, incrementa `coupons.uses_count` si aplica, y dispara email de confirmación.
+Recibe los datos del Payment Brick, crea el pago en MP, actualiza la orden (con el estado **mapeado** — ver `lib/payments/status.ts`) y dispara email de confirmación.
+
+**Qué NO hace este endpoint:**
+- NO incrementa `coupons.uses_count` — eso lo hace **solo el webhook** en la transición a `paid` (un único lugar = sin doble conteo).
+- NO acepta `tenantId` del cliente — sale de `process.env.NEXT_PUBLIC_TENANT_ID`.
+- NO escribe estados crudos de MP en `orders.status` — siempre vía `mapMpStatus()`.
+- NO pisa `external_reference` — ese campo vincula la orden con la preferencia y no se toca.
+- NO devuelve detalles internos de errores al cliente.
 
 ```typescript
 import { MercadoPagoConfig, Payment as MpPayment } from "mercadopago";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { mapMpStatus, isPaymentValid } from "@/lib/payments/status";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import {
   buildPaymentConfirmationEmail,
@@ -17,7 +25,8 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { formData, tenantId, orderId } = body;
+    const { formData, orderId } = body;
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID;
 
     if (!formData || !tenantId || !orderId) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
@@ -27,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     const { data: tenant } = await supabaseAdmin
       .from("tenants")
-      .select("mp_access_token, resend_api_key, name")
+      .select("mp_access_token, smpt_user, smpt_pass, name")
       .eq("id", tenantId)
       .single();
 
@@ -41,7 +50,7 @@ export async function POST(request: NextRequest) {
     const { data: order } = await supabaseAdmin
       .from("orders")
       .select(
-        "id, total, coupon_code, discount_amount, shipping_carrier, shipping_service, shipping_cost, payer_email"
+        "id, status, mp_payment_id, total, coupon_code, discount_amount, shipping_carrier, shipping_service, shipping_cost, payer_email"
       )
       .eq("id", orderId)
       .eq("tenant_id", tenantId)
@@ -49,6 +58,14 @@ export async function POST(request: NextRequest) {
 
     if (!order) {
       return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
+    }
+
+    // Idempotencia: si la orden ya tiene un pago cobrado, no crear otro.
+    if (order.status === "paid" && order.mp_payment_id) {
+      return NextResponse.json(
+        { error: "Esta orden ya fue pagada" },
+        { status: 409 }
+      );
     }
 
     const { data: orderItems } = await supabaseAdmin
@@ -97,43 +114,25 @@ export async function POST(request: NextRequest) {
       order.payer_email ||
       null;
 
-    // Actualizar orden
-    await supabaseAdmin
+    // Actualizar orden — estado SIEMPRE mapeado, error SIEMPRE chequeado
+    const { error: updateError } = await supabaseAdmin
       .from("orders")
       .update({
         mp_payment_id: String(result.id),
-        status: result.status,
-        payment_status: result.status_detail,
+        status: mapMpStatus(result.status),
+        payment_status: result.status_detail ?? result.status,
         payer_email: payerEmailStr,
-        external_reference: String(result.id),
         updated_at: new Date().toISOString(),
       })
       .eq("id", orderId);
 
-    const isPaymentValid =
-      result.status === "approved" ||
-      result.status === "in_process" ||
-      result.status === "pending";
-
-    // Incrementar uses_count del cupón
-    if (isPaymentValid && order.coupon_code) {
-      const { data: couponRow } = await supabaseAdmin
-        .from("coupons")
-        .select("id, uses_count")
-        .eq("tenant_id", tenantId)
-        .eq("code", order.coupon_code)
-        .single();
-
-      if (couponRow) {
-        await supabaseAdmin
-          .from("coupons")
-          .update({ uses_count: (couponRow.uses_count ?? 0) + 1 })
-          .eq("id", couponRow.id);
-      }
+    if (updateError) {
+      // No abortar: el pago en MP ya existe. Loggear para conciliación manual.
+      console.error("[process-payment] Error actualizando orden:", updateError);
     }
 
-    // Email de confirmación (no rompe el pago si falla)
-    if (isPaymentValid && payerEmailStr && tenant.resend_api_key && orderItems) {
+    // Email de confirmación vía SMTP (no rompe el pago si falla) — ver skill smtp-email
+    if (isPaymentValid(result.status) && payerEmailStr && tenant.smpt_user && tenant.smpt_pass && orderItems) {
       try {
         const statusText = getPaymentStatusText(result.status!);
         const html = buildPaymentConfirmationEmail({
@@ -159,7 +158,8 @@ export async function POST(request: NextRequest) {
         });
 
         await sendTransactionalEmail({
-          resendApiKey: tenant.resend_api_key,
+          smtpUser: tenant.smpt_user,
+          smtpPass: tenant.smpt_pass,
           to: payerEmailStr,
           subject: `${statusText} - Orden #${result.id}`,
           html,
@@ -177,14 +177,18 @@ export async function POST(request: NextRequest) {
       payment_method_id: result.payment_method_id,
     });
   } catch (error: any) {
+    // Loggear el detalle server-side; al cliente solo mensaje genérico
+    // (los mensajes internos de MP/Supabase no se exponen).
     console.error("Error processing payment:", error);
     return NextResponse.json(
-      {
-        error: "Error al procesar el pago",
-        detail: error?.message || String(error),
-      },
+      { error: "Error al procesar el pago" },
       { status: 500 }
     );
   }
 }
 ```
+
+## Notas
+
+- El email se manda acá para feedback inmediato. Como este endpoint setea `orders.status = "paid"` cuando MP aprueba en sincrónico, el webhook ve `wasPaid = true` y **no** manda un segundo email ni incrementa el cupón dos veces.
+- Si MP devuelve `pending`/`in_process`, el email sale con el texto de estado correspondiente y el webhook se encarga del email de "aprobado" cuando llegue la transición.

@@ -297,4 +297,5 @@ Próximo paso: npm run dev → verificar visualmente.
 4. **No tocar lógica de negocio ni diseño visual.** Solo datos, imágenes, responsive y microinteracciones.
 5. **Máximo 3 mejoras de modernidad por corrida.** No sobrecargar el componente.
 6. **Si el plan es Esencial, saltar Check 6b/6c** (no hay checkout ni MP).
-7. **El order status válido es:** `pending`, `confirmed`, `preparing`, `shipped`, `delivered`, `cancelled`. Si aparece `created` o `approved` → corregir.
+7. **El order status válido es (CHECK real de la DB):** `pending`, `pending_payment`, `paid`, `payment_failed`, `processing`, `confirmed`, `shipped`, `delivered`, `cancelled`, `refunded`. Si el código escribe `created`, `approved`, `in_process`, `rejected` o `preparing` en `orders.status` → corregir usando `mapMpStatus()` de `lib/payments/status.ts`.
+8. **Check de seguridad del checkout:** `create-preference` NO debe leer `price`, `cost`, `discount` ni `tenantId` del body. Si lo hace → corregir según `mercadopago-connection--ref--api-create-preference.md`.

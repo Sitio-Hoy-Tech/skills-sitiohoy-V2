@@ -1,6 +1,6 @@
 ---
 name: scaffold-emprendimiento
-description: Crea desde cero la estructura base de un sitio Next.js para un cliente del plan Emprendimiento de SitioHoy ($37.000/mes). Invoca primero scaffold-base, luego agrega catálogo de hasta 200 productos con variantes, checkout completo con MercadoPago + cuotas, cupones de descuento, envíos por zonas fijas (tabla shipping_zones), confirmación de pedidos por email con Resend, y Umami analytics. El panel de administración se conecta externamente. Al terminar queda listo para el skill de diseño. Usar cuando el usuario diga "crear sitio emprendimiento", "scaffold cliente emprendimiento", o similar.
+description: Crea desde cero la estructura base de un sitio Next.js para un cliente del plan Emprendimiento de SitioHoy ($37.000/mes). Invoca primero scaffold-base, luego agrega catálogo de hasta 200 productos con variantes, checkout completo con MercadoPago + cuotas, cupones de descuento, envíos por zonas fijas (tabla shipping_zones), confirmación de pedidos por email vía SMTP/Hostinger (skill smtp-email), y Umami analytics. El panel de administración se conecta externamente. Al terminar queda listo para el skill de diseño. Usar cuando el usuario diga "crear sitio emprendimiento", "scaffold cliente emprendimiento", o similar.
 ---
 
 # Skill: Scaffold — Plan Emprendimiento
@@ -19,7 +19,7 @@ Si no fueron provistos, preguntar:
 6. **¿Usa Envia.com para los envíos? (Sí / No)** ← decisión clave
    - **Si elige Envia.com (Sí)**, preguntar: *"¿Lo va a usar solo como zona de envíos (ej. solo Correo Argentino) o para usar otros métodos de envío aparte de Correo Argentino?"* (Anotar la respuesta para la configuración posterior).
 7. ¿Carpeta vacía o monorepo? (default: carpeta vacía)
-8. ¿Credenciales listas? (Supabase, MercadoPago, Resend, Umami) — si no, placeholders
+8. ¿Credenciales listas? (Supabase, MercadoPago, SMTP/Hostinger, Umami) — si no, placeholders
 
 > **Pregunta 6 textual al usuario:**
 >
@@ -42,7 +42,7 @@ Según la respuesta se sigue **Rama A (Envia)** o **Rama B (zonas fijas)**.
 | Storage | Supabase Storage |
 | Pagos | MercadoPago + cuotas |
 | Envíos | Envia.com (Rama A) o `shipping_zones` (Rama B) |
-| Emails | Resend (confirmación pedidos + contacto) |
+| Emails | SMTP/Hostinger vía nodemailer (confirmación pedidos + contacto) — skill `smtp-email` |
 | Analytics | Umami Cloud |
 
 ## Tablas Supabase usadas
@@ -105,6 +105,7 @@ Plan: `emprendimiento`. El script `setup-rls.sql` ahora:
 - `policies-categories`
 - `policies-orders-coupons`
 - `policies-system`
+- `policies-internal` (SIEMPRE)
 (NO cargar `policies-shipping-zones`).
 
 **Si Rama B (zonas fijas):** cargar refs:
@@ -113,6 +114,7 @@ Plan: `emprendimiento`. El script `setup-rls.sql` ahora:
 - `policies-shipping-zones`
 - `policies-orders-coupons`
 - `policies-system`
+- `policies-internal` (SIEMPRE)
 
 Generar `scripts/setup-rls.sql` completo.
 
@@ -130,33 +132,19 @@ El archivo usa `TODO_TENANT_ID` como placeholder — el usuario hace Ctrl+H y lo
 #### 4.2 — `supabase-storage` ✅
 Bucket `objects`. Si la instancia ya lo tiene, no recrear.
 
-#### 4.3 — `rls-on-demand` ✅
-Plan: `emprendimiento`.
-**Si Rama A (Envia):** cargar refs:
-- `policies-products`
-- `policies-categories`
-- `policies-orders-coupons`
-- `policies-system`
-(NO cargar `policies-shipping-zones`).
-
-**Si Rama B (zonas fijas):** cargar refs:
-- `policies-products`
-- `policies-categories`
-- `policies-shipping-zones`
-- `policies-orders-coupons`
-- `policies-system`
-
-Generar `scripts/setup-rls.sql` con todas + ALTER TABLE para las tablas correspondientes.
+> **Nota:** `rls-on-demand` ya se invocó en 4.1 — NO volver a invocarlo. El `setup-rls.sql` se genera UNA sola vez (incluye siempre el ref `policies-internal`).
 
 #### 4.4 — `mercadopago-connection` ✅
 Generar:
-- `app/api/create-preference/route.ts`
+- `lib/payments/status.ts` (mapeo de estados MP → DB — **primero**, lo importan los endpoints)
+- `app/api/create-preference/route.ts` (precios/cupón/envío calculados server-side)
 - `app/api/process-payment/route.ts`
-- `app/api/webhooks/mercadopago/route.ts`
+- `app/api/webhooks/mercadopago/route.ts` (con validación de firma `x-signature`)
 - `app/checkout/page.tsx` (Payment Brick)
+- Correr el setup SQL del skill (columna `mp_webhook_secret` + RPC `increment_coupon_use`)
 
-#### 4.5 — `resend-email` ✅
-Generar `lib/email/send.ts` y `lib/email/templates/payment.ts`. Estos los usan los endpoints de mercadopago.
+#### 4.5 — `smtp-email` ✅
+Generar `lib/email/send.ts` (nodemailer/Hostinger) y `lib/email/templates/payment.ts`. Estos los usan los endpoints de mercadopago.
 
 #### 4.6 — `umami-analytics` ✅
 Plan: `emprendimiento`. Eventos: los de Esencial + `add_to_cart`, `select_variant`, `start_checkout`, `apply_coupon`, `select_shipping_zone`, `purchase`.
@@ -177,15 +165,16 @@ Generar y configurar la revalidación on-demand (ISR) del caché leyendo el skil
 - [ ] `app/api/contact/route.ts` funcional (de scaffold-base)
 - [ ] Flujo de checkout es: `/carrito` → `/checkout/datos` → `/checkout` (Payment Brick) → `/checkout/status`
 - [ ] Header/MobileMenu: botón "Pedido" (o carrito) enlaza a `/carrito`, NO directamente a `/checkout/datos`
-- [ ] `app/api/create-preference/route.ts` crea orden + order_items + popula columnas individuales (`shipping_carrier`, `shipping_service`, `shipping_cost`, `shipping_postal_code`, `coupon_code`, `discount_amount`) (en Rama A desde Envia, en Rama B desde zonas)
-- [ ] `app/api/process-payment/route.ts` actualiza orden e incrementa `coupons.uses_count`
-- [ ] `app/api/webhooks/mercadopago/route.ts` detecta transición a approved (no duplica)
+- [ ] `app/api/create-preference/route.ts` crea orden + order_items + popula columnas individuales (`shipping_carrier`, `shipping_service`, `shipping_cost`, `shipping_postal_code`, `coupon_code`, `discount_amount`). **Calcula precios, descuento y envío server-side** (en Rama A re-cotiza Envia, en Rama B lookup de zona por id). NO lee `price`/`cost`/`discount`/`tenantId` del body
+- [ ] `lib/payments/status.ts` presente — `orders.status` se escribe SOLO vía `mapMpStatus()`
+- [ ] `app/api/process-payment/route.ts` actualiza la orden (NO incrementa cupón)
+- [ ] `app/api/webhooks/mercadopago/route.ts` valida firma `x-signature`, detecta transición a `paid` (no duplica) e incrementa `coupons.uses_count` vía RPC
 - [ ] `app/(public)/catalogo/page.tsx` query con `.limit(200)`
 - [ ] `app/(public)/producto/[slug]/page.tsx` trae producto + imágenes + variantes
 - [ ] `app/(public)/carrito/page.tsx` presente — revisar items, ajustar cantidades, eliminar, antes de ir al checkout
 - [ ] **No existe** ningún directorio `app/admin/` (panel es externo)
 - [ ] Imágenes usan tabla `product_images`
-- [ ] `package.json` incluye: `@supabase/ssr`, `@supabase/supabase-js`, `mercadopago`, `@mercadopago/sdk-react`, `resend`
+- [ ] `package.json` incluye: `@supabase/ssr`, `@supabase/supabase-js`, `mercadopago`, `@mercadopago/sdk-react`, `nodemailer`
 - [ ] `scripts/setup-rls.sql` presente
 - [ ] `npm run build` sin errores
 
@@ -205,8 +194,8 @@ Stack configurado:
 - Flujo checkout: /carrito → /checkout/datos → /checkout → /checkout/status ✓
 - Validación de cupones (/api/coupons/validate) ✓
 - Envíos: Envia.com (Rama A) o zonas fijas (Rama B) ✓
-- Confirmación de pedidos → Resend ✓
-- Formulario de contacto → Resend ✓
+- Confirmación de pedidos → SMTP/Hostinger ✓
+- Formulario de contacto → SMTP/Hostinger ✓
 - WhatsApp CTAs (número: {whatsapp}) ✓
 - Umami Cloud analytics ✓
 - Auth lista para el admin panel externo ✓
@@ -214,7 +203,7 @@ Stack configurado:
 Próximos pasos:
 1. Completar credenciales en .env.local
 2. Ejecutar en Supabase SQL Editor (en orden):
-   a) INSERT del tenant + cargar credenciales (mp_access_token, mp_public_key, resend_api_key, umami_url)
+   a) INSERT del tenant + cargar credenciales (mp_access_token, mp_public_key, mp_webhook_secret, smpt_user, smpt_pass, whatsapp, contact_email, url, umami_url, umami_website_id, revalidation_secret)
    b) scripts/setup-rls.sql (políticas de seguridad)
    c) scripts/seed-data.sql (productos + categorías + zonas + cupones de prueba)
 3. Invocar skill sitio-diseno para armar la UI con copy del rubro + imágenes Unsplash + animaciones
@@ -237,6 +226,7 @@ El admin gestiona: productos, imágenes, categorías, variantes, pedidos, cupone
 6. **Cupón en `orders`:** popular `coupon_code` y `discount_amount` cuando aplica.
 7. **Email nunca rompe el pago** — siempre en try/catch.
 8. **Máximo 200 productos** — `.limit(200)` en queries de catálogo.
-9. **Zonas de envío vienen siempre de `shipping_zones`** — nunca hardcodear.
+9. **Zonas de envío (Rama B) vienen siempre de `shipping_zones`** — nunca hardcodear.
 10. **NO instalar** Stripe, PayPal, Google Analytics, SendGrid.
-11. **NO usar `envia_access_token`** — eso es plan Empresa.
+11. **Envia.com en Emprendimiento es válido SOLO si se eligió Rama A en la pregunta 6** (como zona de envíos —ej. solo Correo Argentino— o con otros métodos además de Correo Argentino). En Rama A, `envia_access_token` y `origin_*` deben cargarse en el tenant. En Rama B, NO usar `envia_access_token`.
+12. **La pregunta 6 (¿usa Envia.com?) se hace SIEMPRE al arrancar** un sitio Emprendimiento — nunca asumir la rama.

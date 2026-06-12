@@ -1,6 +1,6 @@
 ---
 name: footer-branding-sitiohoy
-description: Barra inferior del footer que muestra la marca SitioHoy en TODAS las plantillas, independientemente del plan. Es la última franja del footer, debajo de todo el contenido del cliente. Incluye el logo de SitioHoy en tamaño pequeño + texto "Sitio creado con SitioHoy" con link a sitiohoy.com.ar. Este componente es IDÉNTICO en todas las plantillas — no varía con el diseño del footer del cliente. Solo cambia el color del logo si hay conflicto de contraste con el fondo.
+description: Barra inferior del footer que muestra la marca SitioHoy en TODAS las plantillas, independientemente del plan. Es la última franja del footer, debajo de todo el contenido del cliente. Incluye el logo PNG de SitioHoy en tamaño pequeño + texto "Sitio creado con SitioHoy" con link a sitiohoy.com.ar. Este componente es IDÉNTICO en todas las plantillas — no varía con el diseño del footer del cliente.
 ---
 
 # Skill: Footer Branding — SitioHoy
@@ -10,6 +10,25 @@ Barra de marca de la plataforma que va al **final de TODOS los footers**, debajo
 ## Regla principal
 
 **Este componente es FIJO y CONSISTENTE en todas las plantillas.** No cambia de diseño ni de posición. Siempre va como última franja del footer, separada visualmente del resto.
+
+---
+
+## El logo — archivo PNG real (NUNCA inventar un SVG)
+
+El logo oficial es un **PNG** que vive en la carpeta de assets de las skills:
+
+```
+D:\escritorio\skills-sitiohoy-V2\skills\assets\sitiohoy-logo.png          ← logo principal
+D:\escritorio\skills-sitiohoy-V2\skills\assets\sitiohoy-logo-light.png   ← versión clara (opcional, para footers verdes)
+```
+
+**Al implementar el componente:**
+
+1. **Copiar** `sitiohoy-logo.png` (y `sitiohoy-logo-light.png` si existe) al `public/` del proyecto:
+   ```bash
+   cp "D:\escritorio\skills-sitiohoy-V2\skills\assets\sitiohoy-logo.png" public/sitiohoy-logo.png
+   ```
+2. Si la carpeta de assets **no está disponible** (o el archivo no existe): preguntar al usuario la ruta del PNG. Si tampoco la tiene a mano, usar el **fallback solo-texto** (ver abajo) — **NUNCA inventar, dibujar ni aproximar un logo SVG.** Un logo falso en el footer de un cliente es peor que no tener logo.
 
 ---
 
@@ -25,7 +44,7 @@ Barra de marca de la plataforma que va al **final de TODOS los footers**, debajo
 │                                                     │
 ├─────────────────────────────────────────────────────┤
 │                                                     │
-│   [Logo SitioHoy 20px]  Sitio creado con SitioHoy   │  ← esta franja
+│   [Logo PNG 20px]  Sitio creado con SitioHoy        │  ← esta franja
 │                                                     │
 └─────────────────────────────────────────────────────┘
 ```
@@ -37,25 +56,13 @@ Barra de marca de la plataforma que va al **final de TODOS los footers**, debajo
 | Altura | Auto, con padding vertical de `py-4` |
 | Separador superior | Línea `border-t` sutil (opacidad baja, adaptar al fondo) |
 | Alineación | Centrado horizontal (`justify-center`) |
-| Logo | SVG del logo de SitioHoy, altura `20px`, ancho `auto` |
-| Color del logo | `#10b981` (emerald-500) **por defecto** |
-| Color del logo (fallback) | Si el fondo del footer ya usa `#10b981` o un verde similar (hue 140-170), usar `#f1f5f9` (slate-100) para contraste |
+| Logo | `public/sitiohoy-logo.png`, altura `20px`, ancho `auto` |
+| Logo en footer verde | Usar `public/sitiohoy-logo-light.png` si existe; si no, envolver el logo en un chip con fondo `bg-white/90 rounded px-1` para garantizar contraste |
 | Texto | `"Sitio creado con"` en `text-xs` + `"SitioHoy"` como link a `https://sitiohoy.com.ar` |
+| Color del link | `#10b981` (emerald-500) — o `#f1f5f9` si el fondo del footer es verde |
 | Color del texto | Heredar la opacidad del footer padre (generalmente `text-neutral-50/40` en footers oscuros, `text-neutral-400` en footers claros) |
-| Hover en link | Transición a `#10b981` (o al fallback si aplica) |
+| Hover en link | `hover:underline` + subir opacidad |
 | Fuente | `font-body` (la del sitio), `text-xs` |
-
-### Color del logo — lógica de contraste
-
-```typescript
-// Dentro del componente, determinar si #10b981 contrasta con el fondo:
-// - Si el footer tiene fondo oscuro (neutral-900, neutral-800, etc.) → usar #10b981 ✅
-// - Si el footer tiene fondo verde/emerald → usar #f1f5f9 (slate-100) ✅
-// - Si el footer tiene fondo claro (white, neutral-50) → usar #10b981 ✅
-// - Si el footer tiene fondo con brand-primary verde → usar #f1f5f9 ✅
-```
-
-En la práctica: **usar `#10b981` siempre, salvo que el fondo del footer sea verde.** El modelo debe verificar el color de fondo del footer del cliente al implementar.
 
 ---
 
@@ -64,55 +71,37 @@ En la práctica: **usar `#10b981` siempre, salvo que el fondo del footer sea ver
 ```tsx
 // components/ui/SitioHoyBranding.tsx
 
-import Link from "next/link";
-
 interface SitioHoyBrandingProps {
-  /** Si el fondo del footer es verde, pasar true para usar color alternativo */
+  /** Si el fondo del footer es verde, pasar true para usar la versión clara */
   greenBackground?: boolean;
 }
 
 export function SitioHoyBranding({ greenBackground = false }: SitioHoyBrandingProps) {
-  const logoColor = greenBackground ? "#f1f5f9" : "#10b981";
-  const textColor = greenBackground
-    ? "text-white/40 hover:text-white/60"
-    : "text-current opacity-40 hover:opacity-60";
+  const linkColor = greenBackground ? "#f1f5f9" : "#10b981";
+  const logoSrc = greenBackground
+    ? "/sitiohoy-logo-light.png" // si no existe esta versión, usar el chip de contraste (ver skill)
+    : "/sitiohoy-logo.png";
 
   return (
     <div className="border-t border-current/5 mt-6">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-center gap-2">
-        {/* Logo SitioHoy — SVG inline para control de color */}
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 1024 1024"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
+        {/* Logo PNG real — copiado desde assets/ a public/. <img> nativo: a 20px
+            no hay beneficio de <Image> y evita el tema de sizes/remotePatterns. */}
+        <img
+          src={logoSrc}
+          alt=""
           aria-hidden="true"
-        >
-          {/* 
-            Logo de SitioHoy — la "S" estilizada sobre fondo redondeado.
-            El path exacto del logo SVG debe copiarse del archivo logo original.
-            Usar fill={logoColor} para la "S" y sin fondo (transparente).
-          */}
-          <rect rx="180" width="1024" height="1024" fill={logoColor} />
-          <path
-            d="M512 160c-60 0-120 40-160 100-80 120-100 260-40 380 30 60 80 120 140 160 40 30 80 50 120 60 60 20 120 10 160-20 60-40 80-120 40-200-20-40-60-80-100-100-60-40-120-60-160-40-30 10-40 40-20 70 20 40 60 60 100 60 30 0 60-10 80-30 30-30 20-80-20-120-30-30-80-40-120-20-60 20-100 80-100 160 0 60 40 100 80 80"
-            fill="white"
-            stroke="white"
-            strokeWidth="20"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+          className="h-5 w-auto"
+        />
 
-        <p className={`font-body text-xs transition-opacity ${textColor}`}>
+        <p className="font-body text-xs opacity-40 hover:opacity-60 transition-opacity">
           Sitio creado con{" "}
           <a
             href="https://sitiohoy.com.ar"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:underline"
-            style={{ color: logoColor }}
+            style={{ color: linkColor }}
           >
             SitioHoy
           </a>
@@ -123,7 +112,13 @@ export function SitioHoyBranding({ greenBackground = false }: SitioHoyBrandingPr
 }
 ```
 
-> **⚠️ IMPORTANTE — Logo SVG:** El componente de arriba usa un path SVG aproximado como placeholder. Al implementar, el modelo debe usar el **SVG real del logo de SitioHoy** (la "S" estilizada). El archivo del logo se encuentra en `public/sitiohoy-logo.svg` de cada proyecto — copiar el SVG ahí y usarlo inline o como `<Image>`. Lo importante es que se vea a `20px` de alto y en el color correcto.
+### Fallback solo-texto (si el PNG no está disponible)
+
+```tsx
+// Mismo componente SIN <img> — solo la línea de texto con el link.
+// Dejar un comentario para reponer el logo cuando esté el archivo:
+{/* TODO: copiar assets/sitiohoy-logo.png a public/ y agregar el <img> */}
+```
 
 ---
 
@@ -161,18 +156,19 @@ export function Footer({ brandName, brandTagline }: FooterProps) {
 2. **SIEMPRE al final.** Debajo del copyright del cliente, como última franja visible.
 3. **NUNCA en medio del footer.** No mezclarlo con los links de navegación del cliente.
 4. **Logo pequeño (20px).** No debe competir visualmente con la marca del cliente.
-5. **Color `#10b981` por defecto.** Solo cambiar si el fondo del footer es verde.
+5. **El logo es el PNG real de `assets/`** copiado a `public/sitiohoy-logo.png`. NUNCA inventar un SVG ni usar otro archivo.
 6. **Discreto pero visible.** Opacidad baja, pero legible. No esconder.
 7. **El link apunta a `https://sitiohoy.com.ar`** con `target="_blank"`.
-8. **El SVG del logo va inline** (no como `<Image>`) para control directo del color via prop.
+8. **Si el PNG no está disponible → fallback solo-texto** con TODO para reponerlo.
 
 ---
 
 ## Validación
 
+- [ ] `public/sitiohoy-logo.png` existe en el proyecto (copiado desde assets de las skills).
 - [ ] `<SitioHoyBranding />` renderizado al final de cada footer.
 - [ ] Logo visible a 20px de alto.
-- [ ] Color del logo es `#10b981` o `#f1f5f9` según fondo.
+- [ ] En footers verdes: versión light o chip de contraste.
 - [ ] Link funcional a `sitiohoy.com.ar`.
 - [ ] No interfiere visualmente con el footer del cliente.
 - [ ] Presente en mobile y desktop.

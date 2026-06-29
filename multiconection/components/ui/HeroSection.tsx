@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, useInView, animate, useMotionValue } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { trackEvent } from "@/lib/analytics/umami";
@@ -26,11 +26,52 @@ interface HeroSectionProps {
 }
 
 const STATS = [
-  { value: "3.500+", label: "Instalaciones" },
-  { value: "500+", label: "Clientes activos" },
-  { value: "15+", label: "Años de experiencia" },
-  { value: "24/7", label: "Soporte técnico" },
+  { target: 3500, suffix: "+", label: "Instalaciones" },
+  { target: 500,  suffix: "+", label: "Clientes activos" },
+  { target: 15,   suffix: "+", label: "Años de experiencia" },
+  { target: 24,   suffix: "/7", label: "Soporte técnico", raw: "24/7" },
 ];
+
+function formatAR(n: number) {
+  return new Intl.NumberFormat("es-AR").format(Math.round(n));
+}
+
+function StatCounter({ stat, isMobile }: { stat: typeof STATS[number]; isMobile: boolean }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-50px" });
+  const count = useMotionValue(0);
+  const [display, setDisplay] = useState(() => (isMobile ? stat.raw ?? formatAR(stat.target) : "0"));
+
+  useEffect(() => {
+    if (isMobile) return;
+    if (stat.raw) return;
+    if (!inView) return;
+    const controls = animate(count, stat.target, {
+      duration: 2,
+      ease: [0.16, 1, 0.3, 1],
+      onUpdate: (v) => setDisplay(formatAR(v)),
+    });
+    return () => controls.stop();
+  }, [inView, isMobile, stat.raw, stat.target, count]);
+
+  return (
+    <div className="text-center sm:text-left">
+      <p
+        ref={ref}
+        className="font-display font-black text-3xl sm:text-4xl mb-1"
+        style={{ color: "#00B8D4" }}
+      >
+        {stat.raw ? stat.raw : `${display}${stat.suffix}`}
+      </p>
+      <p
+        className="font-body text-xs uppercase tracking-wider"
+        style={{ color: "rgba(255,255,255,0.45)" }}
+      >
+        {stat.label}
+      </p>
+    </div>
+  );
+}
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -204,20 +245,7 @@ export function HeroSection({ waLink }: HeroSectionProps) {
             className="no-anim-mobile grid grid-cols-2 sm:grid-cols-4 gap-6"
           >
             {STATS.map((stat) => (
-              <div key={stat.label} className="text-center sm:text-left">
-                <p
-                  className="font-display font-black text-3xl sm:text-4xl mb-1"
-                  style={{ color: "#00B8D4" }}
-                >
-                  {stat.value}
-                </p>
-                <p
-                  className="font-body text-xs uppercase tracking-wider"
-                  style={{ color: "rgba(255,255,255,0.45)" }}
-                >
-                  {stat.label}
-                </p>
-              </div>
+              <StatCounter key={stat.label} stat={stat} isMobile={isMobile} />
             ))}
           </motion.div>
         </div>

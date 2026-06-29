@@ -29,6 +29,21 @@ export const metadata: Metadata = {
     siteName: "Multi Conection",
     locale: "es_AR",
     type: "website",
+    images: [
+      {
+        url: "/logo1.png",
+        width: 1200,
+        height: 630,
+        alt: "Multi Conection",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Multi Conection — Pantallas LED Profesionales",
+    description:
+      "Soluciones en pantallas LED para publicidad, eventos y marketing digital.",
+    images: ["/logo1.png"],
   },
   icons: [
     { rel: "icon", url: "/favicon.png" },

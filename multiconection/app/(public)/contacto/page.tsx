@@ -8,31 +8,36 @@ import { trackEvent } from "@/lib/analytics/umami";
 export default function ContactoPage() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error">("idle");
-
-  const waLink = buildWhatsAppLink({
-    message: "Hola, quiero consultar sobre pantallas LED.",
-  });
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("sending");
+    setErrorMsg(null);
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, honeypot: "" }),
       });
       if (res.ok) {
         setStatus("ok");
         setForm({ name: "", email: "", phone: "", message: "" });
         trackEvent("contact_form_submit");
       } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data?.error ?? "Hubo un error al enviar.");
         setStatus("error");
       }
     } catch {
+      setErrorMsg("Hubo un error al enviar. Intentá por WhatsApp.");
       setStatus("error");
     }
   }
+
+  const waLink = buildWhatsAppLink({
+    message: "Hola, quiero consultar sobre pantallas LED.",
+  });
 
   return (
     <>
@@ -325,7 +330,7 @@ export default function ContactoPage() {
                         className="font-body text-sm"
                         style={{ color: "#D91B8A" }}
                       >
-                        Hubo un error al enviar. Intentá por WhatsApp.
+                        {errorMsg ?? "Hubo un error al enviar. Intentá por WhatsApp."}
                       </p>
                     )}
 

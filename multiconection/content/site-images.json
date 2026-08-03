@@ -39,90 +39,90 @@
     {
       "id": 2,
       "src": "/images/trabajos/02.jpg",
-      "alt": "Show en vivo CABA",
-      "title": "Show en vivo — CABA",
-      "description": "Pantallas P10 rental para evento masivo de 10,000 personas.",
-      "category": "Eventos"
+      "alt": "Pantalla LED exterior en Peugeot Argentina",
+      "title": "Peugeot Argentina",
+      "description": "Pantalla LED exterior instalada en una sede de Peugeot Argentina.",
+      "category": "Automotriz"
     },
     {
       "id": 3,
       "src": "/images/trabajos/03.jpg",
-      "alt": "Publicidad móvil",
-      "title": "Publicidad móvil",
-      "description": "Proyecto publicitario led en acción.",
-      "category": "Corporativo"
+      "alt": "Pantallas LED en el Teatro Astros",
+      "title": "Teatro Astros",
+      "description": "Pantallas LED para el escenario del Teatro Astros.",
+      "category": "Teatros"
     },
     {
       "id": 4,
       "src": "/images/trabajos/04.jpg",
-      "alt": "Tótem LED Autopista Panamericana",
-      "title": "Autopista Panamericana",
-      "description": "Tótem LED de 2x1m para publicidad de alto tráfico.",
-      "category": "Vía pública"
+      "alt": "Pantallas LED en salón de eventos",
+      "title": "Salones de Eventos",
+      "description": "Soluciones modulares de pantallas LED para salones de eventos.",
+      "category": "Eventos"
     },
     {
       "id": 5,
       "src": "/images/trabajos/05.webp",
-      "alt": "Festival de música con pantallas Curve P6.25",
-      "title": "Festival de música",
-      "description": "Sistema de 3 pantallas Curve P6.25 para escenario principal.",
-      "category": "Eventos"
+      "alt": "Pantalla LED de Andreani Argentina",
+      "title": "Andreani Argentina",
+      "description": "Pantalla LED de gran formato para Andreani Argentina.",
+      "category": "Corporativo"
     },
     {
       "id": 6,
       "src": "/images/trabajos/06.jpg",
-      "alt": "Showroom automotriz pantalla fine pitch",
-      "title": "Showroom automotriz",
-      "description": "Pantalla indoor pitch 2.5mm para sala de ventas premium.",
-      "category": "Locales comerciales"
+      "alt": "Pantallas LED en la vía pública",
+      "title": "Pantallas Vía Pública",
+      "description": "Pantallas LED de gran formato para publicidad en la vía pública.",
+      "category": "Vía pública"
     },
     {
       "id": 7,
-      "src": "/images/trabajos/07.jpg",
-      "alt": "Estadio deportivo marcadores LED",
-      "title": "Estadio deportivo",
-      "description": "Marcadores LED perimetrales y pantalla central.",
+      "src": "/images/trabajos/estadio-javier-bussola.jpg",
+      "alt": "Pantallas LED en escenario de estadio argentino",
+      "title": "Pantalla en Estadio Argentino",
+      "description": "Pantallas LED de gran formato para un escenario en un estadio argentino.",
       "category": "Deportes"
     },
     {
       "id": 8,
       "src": "/images/trabajos/08.jpg",
-      "alt": "Hotel 5 estrellas pantalla transparente",
-      "title": "Hotel 5 estrellas",
-      "description": "Recepción con pantalla transparente mesh en vidriera.",
-      "category": "Hospitality"
+      "alt": "Pantallas LED en el Teatro El Nacional y el Teatro Regina",
+      "title": "Teatro El Nacional y Teatro Regina",
+      "description": "Pantallas LED para producciones del Teatro El Nacional y el Teatro Regina.",
+      "category": "Teatros"
     },
     {
       "id": 9,
       "src": "/images/trabajos/09.jpg",
-      "alt": "Cadena de farmacias pantallas P4",
-      "title": "Cadena de farmacias",
-      "description": "40 instalaciones de pantallas P4 en locales propios.",
-      "category": "Retail"
+      "alt": "Pantalla LED del Gobierno de la Ciudad de Buenos Aires",
+      "title": "Gobierno de la Ciudad de Buenos Aires",
+      "description": "Pantalla LED institucional para el Gobierno de la Ciudad de Buenos Aires.",
+      "category": "Institucional"
     },
     {
       "id": 10,
       "src": "/images/trabajos/10.jpg",
-      "alt": "Congreso nacional LED wall",
-      "title": "Congreso nacional",
-      "description": "Sala de conferencias con LED wall 12x3m.",
-      "category": "Corporativo"
+      "alt": "Camión publicitario completo con pantallas LED",
+      "title": "Camión Publicitario Completo",
+      "description": "Camión equipado con pantallas LED y sistema de sonido para acciones publicitarias.",
+      "category": "Publicidad móvil"
     },
     {
       "id": 11,
       "src": "/images/trabajos/11.jpg",
-      "alt": "Exposición CABA pantallas LED flexibles",
-      "title": "Exposición CABA",
-      "description": "Stand de 80m² con pantallas LED flexibles curvas.",
-      "category": "Eventos"
+      "alt": "Pantalla LED en la casa central de la fábrica de Citroën Argentina",
+      "title": "Casa Central Fábrica de Citroën Argentina",
+      "description": "Pantalla LED instalada en la casa central de la fábrica de Citroën Argentina.",
+      "category": "Automotriz"
     },
     {
       "id": 12,
       "src": "/images/trabajos/12.jpg",
-      "alt": "Supermercado cadena nacional pantallas indoor P3",
-      "title": "Supermercado cadena nacional",
-      "description": "Red de pantallas indoor P3 en puntos de venta clave.",
-      "category": "Retail"
+      "alt": "Pantalla LED en recital de La T y La M",
+      "title": "Recital de La T y La M",
+      "description": "Pantalla LED de gran formato para el recital de La T y La M.",
+      "category": "Recitales"
     }
   ]
 }
